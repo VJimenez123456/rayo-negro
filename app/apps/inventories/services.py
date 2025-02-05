@@ -1,7 +1,7 @@
 from .models import InventorySchema
 from app.database import get_db_connection
 from .helper import sql_inventory_update
-from locations.helper import select_location_id
+from app.apps.locations.helper import select_location_id
 
 
 async def update_inventory_service(inventory: InventorySchema):

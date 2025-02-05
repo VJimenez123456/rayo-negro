@@ -28,7 +28,7 @@ async def update_location_service(location: LocationSchema):
     cursor = connection.cursor(dictionary=True)
     print("loc-shopify", location.id)
     is_updated = False
-    location_obj = (location.name, location.id)
+    location_obj = (location.id, location.name, location.id)
     print("location_obj-u", location_obj)
     try:
         cursor.execute(sql_location_update, location_obj)

@@ -37,8 +37,6 @@ async def update_location_service(location: LocationSchema):
     finally:
         cursor.close()
     return is_updated
-    # cursor.execute(select_location_id, (location.id,))
-    # result = cursor.fetchone()
 
 
 # async def delete_location_service(location: DeleteLocationSchema):

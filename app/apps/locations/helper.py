@@ -1,6 +1,6 @@
 # flake8: noqa
 sql_location_create = """
-    INSERT INTO locations (Locatiosn_name, created_at, location_shopify)
+    INSERT INTO locations (Location_name, created_at, location_shopify)
     VALUES (%s, %s, %s)
 """
 sql_location_update = """

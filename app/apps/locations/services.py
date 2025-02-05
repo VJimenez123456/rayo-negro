@@ -27,22 +27,18 @@ async def update_location_service(location: LocationSchema):
     connection = get_db_connection()
     cursor = connection.cursor(dictionary=True)
     print("loc-shopify", location.id)
-    cursor.execute(select_location_id, (location.id,))
-    result = cursor.fetchone()
-    print("result", result)
-    location_id = result["SucursalID"] if result else None
-    print("location_id", location_id)
     is_updated = False
-    if location_id:
-        location_obj = (location_id, location.name, location.id)
-        print("location_obj-u", location_obj)
-        try:
-            cursor.execute(sql_location_update, location_obj)
-            connection.commit()
-            is_updated = True
-        finally:
-            cursor.close()
+    location_obj = (location.name, location.id)
+    print("location_obj-u", location_obj)
+    try:
+        cursor.execute(sql_location_update, location_obj)
+        connection.commit()
+        is_updated = True
+    finally:
+        cursor.close()
     return is_updated
+    # cursor.execute(select_location_id, (location.id,))
+    # result = cursor.fetchone()
 
 
 # async def delete_location_service(location: DeleteLocationSchema):

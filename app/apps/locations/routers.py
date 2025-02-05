@@ -2,7 +2,7 @@ from fastapi import APIRouter, status
 from starlette.responses import JSONResponse
 from .models import LocationSchema  # , DeleteLocationSchema
 from .services import (
-    create_location_service,
+    # create_location_service,
     # delete_location_service,
     update_location_service
 )

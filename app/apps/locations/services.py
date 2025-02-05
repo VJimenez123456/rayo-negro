@@ -26,8 +26,10 @@ async def create_location_service(location: LocationSchema):
 async def update_location_service(location: LocationSchema):
     connection = get_db_connection()
     cursor = connection.cursor(dictionary=True)
+    print("loc-shopify", location.id)
     cursor.execute(select_location_id, (location.id,))
     result = cursor.fetchone()
+    print("result", result)
     location_id = result["SucursalID"] if result else None
     print("location_id", location_id)
     is_updated = False

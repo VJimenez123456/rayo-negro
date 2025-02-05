@@ -11,6 +11,6 @@ sql_location_update = """
 
 select_location = "SELECT * FROM locations WHERE location_shopify = %s"
 
-select_location_id = "SELECT SucursalID as id FROM locations WHERE location_shopify = %s"
+select_location_id = "SELECT SucursalID FROM locations WHERE location_shopify = %s"
 
 delete_location = "DELETE FROM locations WHERE location_shopify = %s"

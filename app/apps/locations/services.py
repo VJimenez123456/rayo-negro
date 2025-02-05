@@ -28,7 +28,7 @@ async def update_location_service(location: LocationSchema):
     cursor = connection.cursor(dictionary=True)
     cursor.execute(select_location_id, (location.id,))
     result = cursor.fetchone()
-    location_id = result["id"] if result else None
+    location_id = result["SucursalID"] if result else None
     print("location_id", location_id)
     is_updated = False
     if location_id:

@@ -10,17 +10,17 @@ from .services import (
 router = APIRouter()
 
 
-@router.post("/create")
-async def create_location(location: LocationSchema):
-    is_created = await create_location_service(location)
-    if not is_created:
-        JSONResponse(
-            {"message": "Error in create product"},
-            status_code=status.HTTP_400_BAD_REQUEST
-        )
-    return {
-        "message": "Successfully created product",
-    }
+# @router.post("/create")
+# async def create_location(location: LocationSchema):
+#     is_created = await create_location_service(location)
+#     if not is_created:
+#         JSONResponse(
+#             {"message": "Error in create product"},
+#             status_code=status.HTTP_400_BAD_REQUEST
+#         )
+#     return {
+#         "message": "Successfully created product",
+#     }
 
 
 @router.post("/update")

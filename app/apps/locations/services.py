@@ -3,24 +3,24 @@ from app.database import get_db_connection
 from .helper import (
     # delete_location,
     select_location_id,
-    sql_location_create,
+    # sql_location_create,
     sql_location_update
 )
 
 
-async def create_location_service(location: LocationSchema):
-    location_obj = (location.name, location.created_at, location.id)
-    print("location_obj-c", location_obj)
-    connection = get_db_connection()
-    cursor = connection.cursor(dictionary=True)
-    is_created = False
-    try:
-        cursor.execute(sql_location_create, location_obj)
-        connection.commit()
-        is_created = True
-    finally:
-        cursor.close()
-    return is_created
+# async def create_location_service(location: LocationSchema):
+#     location_obj = (location.name, location.created_at, location.id)
+#     print("location_obj-c", location_obj)
+#     connection = get_db_connection()
+#     cursor = connection.cursor(dictionary=True)
+#     is_created = False
+#     try:
+#         cursor.execute(sql_location_create, location_obj)
+#         connection.commit()
+#         is_created = True
+#     finally:
+#         cursor.close()
+#     return is_created
 
 
 async def update_location_service(location: LocationSchema):
@@ -34,7 +34,7 @@ async def update_location_service(location: LocationSchema):
     print("location_id", location_id)
     is_updated = False
     if location_id:
-        location_obj = (location_id, location.name, location.updated_at, location.id)
+        location_obj = (location_id, location.name, location.id)
         print("location_obj-u", location_obj)
         try:
             cursor.execute(sql_location_update, location_obj)

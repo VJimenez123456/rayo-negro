@@ -4,7 +4,7 @@ sql_location_create = """
     VALUES (%s, %s, %s)
 """
 sql_location_update = """
-    INSERT INTO locations (SucursalNombre, location_shopify)
+    INSERT INTO locations (location_shopify, SucursalNombre, location_shopify)
     VALUES (%s, %s, %s)
     ON DUPLICATE KEY UPDATE Location_name=VALUES(Location_name), location_shopify=VALUES(location_shopify)
 """

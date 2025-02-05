@@ -12,6 +12,7 @@ async def update_inventory_service(inventory: InventorySchema):
     result = cursor.fetchone()
     location_id = result["SucursalID"] if result else None
     print("location_id---->", location_id)
+    is_updated = False
     if location_id:
         inventory_obj = (
             inventory.inventory_item_id,
@@ -20,7 +21,6 @@ async def update_inventory_service(inventory: InventorySchema):
             inventory.available
         )
         print("inventory_obj", inventory_obj)
-        is_updated = False
         try:
             cursor.execute(sql_inventory_update, inventory_obj)
             connection.commit()

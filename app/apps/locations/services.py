@@ -2,14 +2,14 @@ from .models import LocationSchema  # , DeleteLocationSchema
 from app.database import get_db_connection
 from .helper import (
     # delete_location,
-    # select_location,
+    select_location_id,
     sql_location_create,
     sql_location_update
 )
 
 
 async def create_location_service(location: LocationSchema):
-    location_obj = (location.id, location.name, location.created_at)
+    location_obj = (location.name, location.created_at, location.id)
     print("location_obj-c", location_obj)
     connection = get_db_connection()
     cursor = connection.cursor(dictionary=True)
@@ -24,17 +24,22 @@ async def create_location_service(location: LocationSchema):
 
 
 async def update_location_service(location: LocationSchema):
-    location_obj = (location.id, location.name, location.updated_at)
-    print("location_obj-u", location_obj)
     connection = get_db_connection()
     cursor = connection.cursor(dictionary=True)
+    cursor.execute(select_location_id, (location.id,))
+    result = cursor.fetchone()
+    location_id = result["id"] if result else None
+    print("location_id", location_id)
     is_updated = False
-    try:
-        cursor.execute(sql_location_update, location_obj)
-        connection.commit()
-        is_updated = True
-    finally:
-        cursor.close()
+    if location_id:
+        location_obj = (location_id, location.name, location.updated_at, location.id)
+        print("location_obj-u", location_obj)
+        try:
+            cursor.execute(sql_location_update, location_obj)
+            connection.commit()
+            is_updated = True
+        finally:
+            cursor.close()
     return is_updated
 
 

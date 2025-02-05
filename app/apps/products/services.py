@@ -5,7 +5,7 @@ from .helper import (
     delete_product,
     select_product,
     delete_product_variants,
-    select_variant,
+    # select_variant,
     sql_product_create,
     sql_product_update,
     sql_variant_create,

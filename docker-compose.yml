@@ -9,14 +9,17 @@ services:
       - .env
     volumes:
       - .:/app
-  db_mysql:
-    container_name: mysql_db_rayo_negro
-    image: mysql
-    restart: always
     environment:
-      MYSQL_DATABASE: db_mysql
-      MYSQL_ROOT_PASSWORD: password_mysql
-    ports:
-      - 3307:3306
+      DEBUG: 1
+    restart: on-failure
+  # db_mysql:
+  #   container_name: mysql_db_rayo_negro
+  #   image: mysql
+  #   restart: always
+  #   environment:
+  #     MYSQL_DATABASE: db_mysql
+  #     MYSQL_ROOT_PASSWORD: password_mysql
+  #   ports:
+  #     - 3307:3306
 volumes:
   db-data:

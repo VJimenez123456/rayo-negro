@@ -14,7 +14,7 @@ from .helper import (
 
 
 async def create_product_service(product: ProductSchema):
-    print("product", product)
+    print("product_id:", product.id)
     variants = product.variants
     new_product = (
         product.id,
@@ -49,6 +49,7 @@ async def create_product_service(product: ProductSchema):
 
 
 async def update_product_service(product: ProductSchema):
+    print("product_id:", product.id)
     connection = get_db_connection()
     cursor = connection.cursor(dictionary=True)
     variants = product.variants
@@ -75,7 +76,7 @@ async def update_product_service(product: ProductSchema):
             variant_stock,
             variant_barcode
         ))
-        cursor.execute(select_variant, (variant_id,))
+        # cursor.execute(select_variant, (variant_id,))
 
     is_updated = False
     try:
@@ -90,6 +91,7 @@ async def update_product_service(product: ProductSchema):
 
 async def delete_product_service(product: DeleteProductSchema):
     product_id = product.id
+    print("product_id:", product_id)
     connection = get_db_connection()
     cursor = connection.cursor(dictionary=True)
     cursor.execute(select_product, (product_id,))

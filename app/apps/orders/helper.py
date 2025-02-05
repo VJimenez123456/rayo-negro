@@ -26,11 +26,8 @@ def determine_order_status(order: OrderSchema):
         return 'Open'
 
 
-def translate(key):
-    return key
-
-
 def parser_order(order: OrderSchema) -> tuple:
+    print("order_id:", order.id)
     customer_name = 'Unknown'
     if order.shipping_address:
         customer_name = order.shipping_address.name
@@ -44,14 +41,14 @@ def parser_order(order: OrderSchema) -> tuple:
 
     # traducir
     order_status = (
-        translate(order.financial_status)
+        translate_status(order.financial_status)
         if order.financial_status else "Unknown"
     )
     fulfillment_status = (
-        translate(order.fulfillment_status)
+        translate_status(order.fulfillment_status)
         if order.fulfillment_status else "No completado"
     )
-    return_status = translate("return_status")
+    return_status = translate_status("return_status")
 
     status_shopify = determine_order_status(order)
 
@@ -63,10 +60,10 @@ def parser_order(order: OrderSchema) -> tuple:
         order_status,
         fulfillment_status,
         order.order_number,
-        return_status,  # preguntar
+        return_status,
         order.note or '',
         "Unknown",  # location_name: preguntar por esto
-        status_shopify,  # StatusShopify
+        status_shopify,
         order.tags or ""
     )
     return order_obj
@@ -94,3 +91,32 @@ def parser_items(order_id: int, items: List[LineItem]) -> List[tuple]:
 
         ))
     return items_objs
+
+
+translation_dict = {
+    'financial_status': {
+        'pending': 'Pendiente',
+        'authorized': 'Autorizado',
+        'partially_paid': 'Parcialmente pagado',
+        'paid': 'Pagado',
+        'partially_refunded': 'Parcialmente reembolsado',
+        'refunded': 'Reembolsado',
+        'voided': 'Anulado'
+    },
+    'fulfillment_status': {
+        'fulfilled': 'Preparado',
+        'partial': 'Parcial',
+        'restocked': 'Reabastecido',
+        'unfulfilled': 'No preparado',
+        None: 'No preparado'
+    },
+    'return_status': {
+        'open': 'Abierto',
+        'closed': 'Cerrado',
+        'none': 'Sin devoluciones'
+    }
+}
+
+
+def translate_status(status_type, status_value):
+    return translation_dict.get(status_type, {}).get(status_value, status_value)

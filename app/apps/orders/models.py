@@ -104,3 +104,5 @@ class OrderSchema(BaseModel):
     total_price: Optional[str]
     customer: Optional[Customer]
     shipping_address: Optional[ShippingAddress]
+    cancelled_at: Optional[Any]
+    closed_at: Optional[Any]

@@ -43,7 +43,7 @@ class Address(BaseModel):
 
 class Customer(BaseModel):
     id: int
-    email: str
+    email: Optional[str]
     created_at: datetime
     updated_at: datetime
     first_name: str

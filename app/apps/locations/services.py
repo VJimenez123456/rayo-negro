@@ -2,7 +2,7 @@ from .models import LocationSchema  # , DeleteLocationSchema
 from app.database import get_db_connection
 from .helper import (
     # delete_location,
-    select_location_id,
+    # select_location_id,
     # sql_location_create,
     sql_location_update
 )
@@ -26,10 +26,8 @@ from .helper import (
 async def update_location_service(location: LocationSchema):
     connection = get_db_connection()
     cursor = connection.cursor(dictionary=True)
-    print("loc-shopify", location.id)
     is_updated = False
     location_obj = (location.id, location.name, location.id)
-    print("location_obj-u", location_obj)
     try:
         cursor.execute(sql_location_update, location_obj)
         connection.commit()

@@ -38,7 +38,6 @@ def determine_order_status(order: OrderSchema):
 
 def parser_order(order: OrderSchema) -> tuple:
     order_id = order.id
-    print("order_id:", order_id)
     customer_name = 'Unknown'
     if order.shipping_address:
         customer_name = order.shipping_address.name

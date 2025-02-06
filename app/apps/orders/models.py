@@ -106,3 +106,4 @@ class OrderSchema(BaseModel):
     shipping_address: Optional[ShippingAddress]
     cancelled_at: Optional[Any]
     closed_at: Optional[Any]
+    line_items: List[LineItem]

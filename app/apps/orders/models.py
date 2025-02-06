@@ -62,35 +62,35 @@ class Customer(BaseModel):
 
 class LineItem(BaseModel):
     id: int
-    admin_graphql_api_id: str
-    attributed_staffs: List[Any]
-    current_quantity: int
-    fulfillable_quantity: int
-    fulfillment_service: str
-    fulfillment_status: Optional[str]
-    gift_card: bool
-    grams: int
-    name: str
+    # admin_graphql_api_id: str
+    # attributed_staffs: List[Any]
+    # current_quantity: int
+    # fulfillable_quantity: int
+    # fulfillment_service: str
+    # fulfillment_status: Optional[str]
+    # gift_card: bool
+    # grams: int
+    # name: str
     price: str
-    price_set: Optional[Any]
-    product_exists: bool
+    # price_set: Optional[Any]
+    # product_exists: bool
     product_id: int
-    properties: List[Any]
+    # properties: List[Any]
     quantity: int
-    requires_shipping: bool
-    sales_line_item_group_id: Optional[Any]
+    # requires_shipping: bool
+    # sales_line_item_group_id: Optional[Any]
     sku: str
-    taxable: bool
+    # taxable: bool
     title: str
-    total_discount: str
-    total_discount_set: Optional[Any]
+    # total_discount: str
+    # total_discount_set: Optional[Any]
     variant_id: int
-    variant_inventory_management: str
-    variant_title: Optional[str]
-    vendor: str
-    tax_lines: List[Any]
-    duties: List[Any]
-    discount_allocations: List[Any]
+    # variant_inventory_management: Optional[str]
+    # variant_title: Optional[str]
+    # vendor: str
+    # tax_lines: List[Any]
+    # duties: List[Any]
+    # discount_allocations: List[Any]
 
 
 class OrderSchema(BaseModel):

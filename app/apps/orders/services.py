@@ -23,7 +23,8 @@ from .helper import (
 #     return is_created
 
 
-async def update_order_service(order: OrderSchema):
+async def update_order_service(order: dict):
+    print("order-schema", order)
     order_obj = parser_order(order)
     order_items = parser_items(order.id, order.line_items)
     connection = get_db_connection()

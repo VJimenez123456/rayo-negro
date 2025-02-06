@@ -52,7 +52,7 @@ def parser_order(order: OrderSchema) -> tuple:
         translate_status("fulfillment_status", order.fulfillment_status)
         if order.fulfillment_status else "No completado"
     )
-    return_status = fetch_return_status(order_id)
+    return_status = translate_status("return_status", fetch_return_status(order_id))
 
     status_shopify = determine_order_status(order)
 

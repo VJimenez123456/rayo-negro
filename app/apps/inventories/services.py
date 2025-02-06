@@ -10,9 +10,7 @@ async def update_inventory_service(inventory: InventorySchema):
     cursor = connection.cursor(dictionary=True)
     cursor.execute(select_location_id, (inventory.location_id,))
     result = cursor.fetchone()
-    print("result---->", result)
     location_id = result["SucursalID"] if result else None
-    print("location_id---->", location_id)
     is_updated = False
     if location_id:
         inventory_obj = (

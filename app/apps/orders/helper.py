@@ -8,9 +8,16 @@ import requests
 from app.core.config import settings
 
 sql_order_update = """
-    INSERT INTO order (id, Customer_name, total_price, created_at, order_status, fulfillment_status, order_number, return_status, note, location_name, StatusShopify, tags)
+    INSERT INTO `order` (
+        id, Customer_name, total_price, created_at, order_status, fulfillment_status,
+        order_number, return_status, note, location_name, StatusShopify, tags)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        ON DUPLICATE KEY UPDATE Customer_name=VALUES(Customer_name), total_price=VALUES(total_price), created_at=VALUES(created_at), order_status=VALUES(order_status), fulfillment_status=VALUES(fulfillment_status), order_number=VALUES(order_number), return_status=VALUES(return_status), note=VALUES(note), location_name=VALUES(location_name), StatusShopify=VALUES(StatusShopify), tags=VALUES(tags)
+        ON DUPLICATE KEY UPDATE Customer_name=VALUES(Customer_name),
+        total_price=VALUES(total_price), created_at=VALUES(created_at),
+        order_status=VALUES(order_status), fulfillment_status=VALUES(fulfillment_status),
+        order_number=VALUES(order_number), return_status=VALUES(return_status),
+        note=VALUES(note), location_name=VALUES(location_name),
+        StatusShopify=VALUES(StatusShopify), tags=VALUES(tags)
 """
 
 sql_items_update = """

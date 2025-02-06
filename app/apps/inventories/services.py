@@ -5,7 +5,6 @@ from app.apps.locations.helper import select_location_id
 
 
 async def update_inventory_service(inventory: InventorySchema):
-    # TODO: por que la duplicación de variant-location
     connection = get_db_connection()
     cursor = connection.cursor(dictionary=True)
     cursor.execute(select_location_id, (inventory.location_id,))

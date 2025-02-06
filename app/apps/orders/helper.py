@@ -3,6 +3,9 @@ from .models import OrderSchema, LineItem
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from typing import List
+import base64
+import requests
+from app.core.config import settings
 
 sql_order_update = """
     INSERT INTO order (id, Customer_name, total_price, created_at, order_status, fulfillment_status, order_number, return_status, note, location_name, StatusShopify, tags)
@@ -27,7 +30,8 @@ def determine_order_status(order: OrderSchema):
 
 
 def parser_order(order: OrderSchema) -> tuple:
-    print("order_id:", order.id)
+    order_id = order.id
+    print("order_id:", order_id)
     customer_name = 'Unknown'
     if order.shipping_address:
         customer_name = order.shipping_address.name
@@ -41,19 +45,19 @@ def parser_order(order: OrderSchema) -> tuple:
 
     # traducir
     order_status = (
-        translate_status(order.financial_status)
+        translate_status("financial_status", order.financial_status)
         if order.financial_status else "Unknown"
     )
     fulfillment_status = (
-        translate_status(order.fulfillment_status)
+        translate_status("fulfillment_status", order.fulfillment_status)
         if order.fulfillment_status else "No completado"
     )
-    return_status = translate_status("return_status")
+    return_status = fetch_return_status(order_id)
 
     status_shopify = determine_order_status(order)
 
     order_obj = (
-        order.id,
+        order_id,
         customer_name,
         order.total_price or '0.00',
         created_at,
@@ -62,7 +66,7 @@ def parser_order(order: OrderSchema) -> tuple:
         order.order_number,
         return_status,
         order.note or '',
-        "Unknown",  # location_name: preguntar por esto
+        "Unknown",  # location_name
         status_shopify,
         order.tags or ""
     )
@@ -120,3 +124,26 @@ translation_dict = {
 
 def translate_status(status_type, status_value):
     return translation_dict.get(status_type, {}).get(status_value, status_value)
+
+
+def fetch_return_status(order_id):
+    api_key = settings.SHOPIFY_API_KEY
+    api_password = settings.SHOPIFY_API_PASSWORD
+    store_url = settings.SHOPIFY_STORE_URL
+    base_url = f"https://{store_url}/admin/api/2023-07/orders/{order_id}/refunds.json"
+    credentials = f"{api_key}:{api_password}"
+    encoded_credentials = base64.b64encode(credentials.encode('utf-8')).decode('utf-8')
+
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': f'Basic {encoded_credentials}'
+    }
+
+    response = requests.get(base_url, headers=headers)
+    if response.status_code == 200:
+        refunds = response.json().get('refunds', [])
+        if refunds:
+            return 'open' if any('status' in refund and refund['status'] == 'open' for refund in refunds) else 'closed'
+        else:
+            return 'none'
+    return 'none'

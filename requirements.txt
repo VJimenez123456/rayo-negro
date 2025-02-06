@@ -6,3 +6,5 @@ pydantic-settings==2.7.1
 SQLAlchemy==2.0.37
 # PyMySQL==1.1.1
 mysql-connector-python==9.2.0
+requests==2.32.3
+pybase64==1.4.0

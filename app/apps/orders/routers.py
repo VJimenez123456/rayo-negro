@@ -21,7 +21,10 @@ router = APIRouter()
 
 
 @router.post("/update")
-async def update_order(order: OrderSchema):
+async def update_order(order_dict: dict):
+    print("order-dict", order_dict)
+    order = OrderSchema(**order_dict)
+    print("order_schema", order.model_dump())
     is_updated = await update_order_service(order)
     if not is_updated:
         JSONResponse(

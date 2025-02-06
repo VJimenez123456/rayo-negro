@@ -30,7 +30,6 @@ async def update_order_service(order: OrderSchema):
     cursor = connection.cursor(dictionary=True)
     is_updated = False
     try:
-        print(":::order_obj--->>>", order_obj)
         cursor.execute(sql_order_update, order_obj)
         cursor.executemany(sql_items_update, order_items)
         connection.commit()

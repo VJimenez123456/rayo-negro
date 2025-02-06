@@ -12,7 +12,7 @@ class TaxLine(BaseModel):
     price: str
     rate: float
     title: str
-    price_set: MoneySet
+    price_set: Optional[Any]
     channel_liable: bool
 
 
@@ -28,7 +28,7 @@ class LineItem(BaseModel):
     grams: int
     name: str
     price: str
-    price_set: MoneySet
+    price_set: Optional[Any]
     product_exists: bool
     product_id: int
     properties: List[Any]
@@ -39,7 +39,7 @@ class LineItem(BaseModel):
     taxable: bool
     title: str
     total_discount: str
-    total_discount_set: MoneySet
+    total_discount_set: Optional[Any]
     variant_id: int
     variant_inventory_management: str
     variant_title: Optional[str]
@@ -126,24 +126,24 @@ class OrderSchema(BaseModel):
     cart_token: Optional[Any]
     checkout_id: int
     checkout_token: str
-    client_details: ClientDetails
+    client_details: Optional[Any]
     closed_at: Optional[Any]
     confirmation_number: str
     confirmed: bool
     contact_email: Optional[str]
     created_at: str
     currency: str
-    current_shipping_price_set: MoneySet
+    current_shipping_price_set: Optional[Any]
     current_subtotal_price: str
-    current_subtotal_price_set: MoneySet
+    current_subtotal_price_set: Optional[Any]
     current_total_additional_fees_set: Optional[Any]
     current_total_discounts: str
-    current_total_discounts_set: MoneySet
+    current_total_discounts_set: Optional[Any]
     current_total_duties_set: Optional[Any]
     current_total_price: str
-    current_total_price_set: MoneySet
+    current_total_price_set: Optional[Any]
     current_total_tax: str
-    current_total_tax_set: MoneySet
+    current_total_tax_set: Optional[Any]
     customer_locale: Optional[str]
     device_id: Optional[Any]
     discount_codes: List[Any]
@@ -176,25 +176,25 @@ class OrderSchema(BaseModel):
     source_name: str
     source_url: Optional[Any]
     subtotal_price: str
-    subtotal_price_set: MoneySet
+    subtotal_price_set: Optional[Any]
     tags: Optional[str]
     tax_exempt: bool
-    tax_lines: List[TaxLine]
+    tax_lines: List[Any]
     taxes_included: bool
     test: bool
     token: str
-    total_cash_rounding_payment_adjustment_set: MoneySet
-    total_cash_rounding_refund_adjustment_set: MoneySet
+    total_cash_rounding_payment_adjustment_set: Optional[Any]
+    total_cash_rounding_refund_adjustment_set: Optional[Any]
     total_discounts: str
-    total_discounts_set: MoneySet
+    total_discounts_set: Optional[Any]
     total_line_items_price: str
-    total_line_items_price_set: MoneySet
+    total_line_items_price_set: Optional[Any]
     total_outstanding: str
     total_price: Optional[str]
-    total_price_set: MoneySet
-    total_shipping_price_set: MoneySet
+    total_price_set: Optional[Any]
+    total_shipping_price_set: Optional[Any]
     total_tax: str
-    total_tax_set: MoneySet
+    total_tax_set: Optional[Any]
     total_tip_received: str
     total_weight: int
     updated_at: datetime
@@ -203,7 +203,7 @@ class OrderSchema(BaseModel):
     customer: Optional[Customer]
     discount_applications: List[Any]
     fulfillments: List[Any]
-    line_items: List[LineItem]
+    line_items: List[Any]
     payment_terms: Optional[Any]
     refunds: List[Any]
     shipping_address: Optional[ShippingAddress]

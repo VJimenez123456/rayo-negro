@@ -23,10 +23,10 @@ from .helper import (
 #     return is_created
 
 
-async def update_order_service(order: dict):
-    print("order-dict", order)
-    order_schema = OrderSchema(**order)
-    print("order_schema", order_schema.model_dump())
+async def update_order_service(order_dict: dict):
+    print("order-dict", order_dict)
+    order = OrderSchema(**order_dict)
+    print("order_schema", order.model_dump())
     order_obj = parser_order(order)
     order_items = parser_items(order.id, order.line_items)
     connection = get_db_connection()

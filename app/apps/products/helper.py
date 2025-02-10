@@ -1,4 +1,8 @@
 # flake8: noqa
+from .models import ProductSchema, Variant
+from typing import List
+
+
 sql_product_create = """
     INSERT INTO product (product_id, title, vendor, price, sku, image_url)
     VALUES (%s, %s, %s, %s, %s, %s)
@@ -31,3 +35,27 @@ def clean_string(value):
     if value is None:
         return 'Unknown'
     return value.encode('ascii', 'ignore').decode('ascii')
+
+
+def get_product_and_variants(product: ProductSchema) -> tuple:
+    variants = product.variants
+    new_product = (
+        product.id,
+        product.title,
+        product.vendor,
+        variants[0].price,
+        variants[0].sku or "Unknown",
+        product.image.src if product.image else "Unknown"
+    )
+    variant_values = []
+    for variant in variants:
+        variant_values.append((
+            variant.id,
+            product.id,
+            clean_string(variant.title),
+            clean_string(variant.sku),
+            variant.price or '0.00',
+            variant.inventory_quantity or 0,
+            clean_string(variant.barcode)
+        ))
+    return new_product, variant_values

@@ -1,4 +1,5 @@
 from .models import DeleteProductSchema, ProductSchema
+from .helper import get_product_and_variants
 from app.database import get_db_connection
 from .helper import (
     clean_string,
@@ -11,6 +12,10 @@ from .helper import (
     sql_variant_create,
     sql_variant_update,
 )
+from typing import List
+from mysql.connector import Error
+
+BATCH_SIZE = 500
 
 
 async def create_product_service(product: ProductSchema):
@@ -107,4 +112,59 @@ async def delete_product_service(product: DeleteProductSchema):
             is_deleted = True
         finally:
             cursor.close()
+    return is_deleted
+
+
+async def update_or_create_many_products_service(
+        products: List[ProductSchema]):
+    total_products = []
+    total_variants = []
+    for product in products:
+        new_product, new_variants = get_product_and_variants(product)
+        total_products.append(new_product)
+        total_variants.extend(new_variants)
+
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    is_created = False
+    try:
+        print("total_variants<<<<<<<<<", len(total_variants))
+        print("total_variants<<<<<<<<<", total_variants[0])
+        print("total_productszzzzzzzzz", len(total_products))
+        print("total_productszzzzzzzzz", total_products[0])
+        cursor.executemany(sql_variant_update, total_variants)
+        cursor.executemany(sql_product_update, total_products)
+        # connection.commit()  # TODO: descomentar
+        is_created = True
+    finally:
+        cursor.close()
+    return is_created
+
+
+async def delete_many_products_service(products: List[DeleteProductSchema]):
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+
+    is_deleted = False
+    try:
+        products_for_delete = []
+        for product in products:
+            cursor.execute(select_product, (product.id,))
+            result = cursor.fetchone()
+            if result:
+                products_for_delete.append(product)
+
+        products_for_execute = [(prod.id,) for prod in products_for_delete]
+        print("products_for_execute", products_for_execute)
+        # Primero eliminar las variantes asociadas al producto
+        cursor.executemany(delete_product_variants, products_for_execute)
+        # Luego eliminar el producto
+        cursor.executemany(delete_product, products_for_execute)
+        # connection.commit()  # TODO: descomentar
+        is_deleted = True
+    except Error as e:
+        print(f"Error en la inserción: {e}")
+        connection.rollback()
+    finally:
+        cursor.close()
     return is_deleted

@@ -99,10 +99,10 @@ class ProductSchema(BaseModel):
     options: List[Option]
     images: List[Image]
     image: Optional[Image]
-    media: List[Media]
-    variant_gids: List[VariantGID]
-    has_variants_that_requires_components: bool
-    category: Optional[Category]
+    media: Optional[List[Media]] = None
+    variant_gids: Optional[List[VariantGID]] = None
+    has_variants_that_requires_components: Optional[bool] = None
+    category: Optional[Category] = None
 
 
 class DeleteProductSchema(BaseModel):

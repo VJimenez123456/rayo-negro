@@ -8,3 +8,4 @@ SQLAlchemy==2.0.37
 mysql-connector-python==9.2.0
 requests==2.32.3
 pybase64==1.4.0
+APScheduler==3.11.0

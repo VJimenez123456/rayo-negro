@@ -14,7 +14,9 @@ from app.apps.products.services import (
     delete_many_products_service,
     update_or_create_many_products_service
 )
+from app.apps.inventories.services import update_many_inventory_service
 from app.apps.products.models import DeleteProductSchema, ProductSchema
+from app.apps.inventories.models import InventorySchema
 
 
 #  Logging settings
@@ -147,8 +149,10 @@ async def update_barcode_in_orders():
 
 async def update_inventory():
     mensaje = f"->Tarea ejecutada a las {datetime.now()}"
+    await update_many_inventory_service()
     logging.info(mensaje)
     print(mensaje)
+    is_updated = False
     # code
     try:
         # connection
@@ -168,7 +172,6 @@ async def update_inventory():
         logging.info("Obteniendo detalles de productos de Shopify...")
         products = fetch_shopify_products()
         print("products---->", len(products))
-        print("products---->", products[:3])
 
         if products and len(products) > 0:
             # Obtener los inventory_item_ids para los niveles de inventario
@@ -181,7 +184,6 @@ async def update_inventory():
             # Delete duplicate
             inventory_item_ids = list(set(inventory_item_ids))
             print("inventory_item_ids", len(inventory_item_ids))
-            print("inventory_item_ids", inventory_item_ids[:3])
 
             # Get inventory levels
             inventory_levels = fetch_inventory_levels(
@@ -189,23 +191,17 @@ async def update_inventory():
                 location_ids=location_ids
             )
             print("inventory_levels", len(inventory_levels))
+            inventories_schemas = [
+                InventorySchema(**item) for item in inventory_levels
+            ]
+            is_updated = await update_many_inventory_service(
+                inventories_schemas)
 
-    #         # Insertar o actualizar productos, variantes e inventarios
-    #         insert_or_update_products_variants_and_inventory(products, conn, locations, inventory_levels)
+    except Error as e:
+        print(f"Error en la inserción: {e}")
+        connection.rollback()
 
-    #         # Eliminar productos archivados o borradores si aplica
-    #         delete_archived_or_draft_products(products, conn, api_version='2023-07')
-
-    #         logging.info(f"Total de productos procesados: {len(products)}")
-    #     else:
-    #         logging.info("No se obtuvieron productos de Shopify.")
-
-    #     conn.close()
-    except Exception as e:
-        logging.exception(f"Se produjo un error inesperado: {e}")
-
-    # logging.info("Esperando 10 minutos para la siguiente sincronización.")
-        # time.sleep(600)
-    
     finally:
         cursor.close()
+
+    return is_updated

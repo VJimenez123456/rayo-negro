@@ -5,7 +5,11 @@ from app.apps.products.routers import router as products_router
 from app.apps.orders.routers import router as orders_router
 from app.apps.locations.routers import router as location_router
 from app.apps.inventories.routers import router as inventory_router
-from app.tasks import update_inventory, update_products, update_barcode_in_orders
+from app.tasks import (
+    update_inventory,
+    # update_products,
+    # update_barcode_in_orders
+)
 from starlette.responses import JSONResponse
 # from datetime import datetime
 
@@ -31,10 +35,10 @@ app.include_router(inventory_router, prefix="/inventories", tags=["Inventories"]
 @app.get("/update_system")
 async def say_hello():
     is_update = False
-    # update product
-    is_update = await update_products()
     # update inventory
-    # is_update = await update_inventory()
+    is_update = await update_inventory()
+    # update product
+    # is_update = await update_products()
     # update barcode in orders
     # is_update = await update_barcode_in_orders()
     if not is_update:

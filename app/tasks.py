@@ -149,7 +149,6 @@ async def update_barcode_in_orders():
 
 async def update_inventory():
     mensaje = f"->Tarea ejecutada a las {datetime.now()}"
-    await update_many_inventory_service()
     logging.info(mensaje)
     print(mensaje)
     is_updated = False

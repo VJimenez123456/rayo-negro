@@ -36,7 +36,7 @@ async def say_hello():
     # update inventory
     # is_update = await update_inventory()
     # update barcode in orders
-    # is_update = await update_barcode_in_orders()
+    is_update = await update_barcode_in_orders()
     if not is_update:
         JSONResponse(
             {"message": "Error in update system"},

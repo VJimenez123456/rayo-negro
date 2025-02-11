@@ -1,5 +1,6 @@
 
 import logging
+import time
 from datetime import datetime
 from app.common.utils import (
     fetch_locations,
@@ -77,7 +78,8 @@ async def update_products() -> bool:
 
 
 async def update_barcode_in_orders():
-    print("here")
+    print("Init update order_items")
+    init_time = time.time()
     is_updated = False
     # connection
     connection = get_db_connection()
@@ -85,38 +87,54 @@ async def update_barcode_in_orders():
     try:
         logging.info("Obteniendo detalles de pedidos de base de datos...")
         select_all_orders = """
-                SELECT *
-                FROM order_item
-                WHERE barcode is null
-                AND variant_id is not null;
-            """
+            SELECT id, barcode, variant_id
+            FROM order_item
+            WHERE variant_id is not null
+            ORDER BY variant_id ASC;
+        """
         cursor.execute(select_all_orders)
         orders_in_bd = cursor.fetchall()
-        print("orders_in_bd", orders_in_bd)
+        print("Orders in bd:", len(orders_in_bd))
+        select_variant = """
+            SELECT variant_id, barcode FROM product_variant;
+        """
+        cursor.execute(select_variant)
+        variant_in_db = cursor.fetchall()
+        variants_dict = {}
+        for var in variant_in_db:
+            variants_dict[var["variant_id"]] = var["barcode"]
+        update_barcode_in_variant = []
         for order_item in orders_in_bd:
-            get_variant = f"""
-                SELECT *
-                FROM product_variant
-                WHERE variant_id = {order_item['variant_id']};
-            """
-            print("get_variant", get_variant)
-            cursor.execute(get_variant)
-            get_variant = cursor.fetchone()
-            if get_variant:
-                update_order_item = f"""
-                    UPDATE order_item
-                    SET barcode = {get_variant["barcode"]}
-                    WHERE id = {order_item['id']};
-                """
-                print("update_order_item", update_order_item)
-                cursor.execute(update_order_item)
-                connection.commit()
+            if order_item["variant_id"] in variants_dict:
+                update_barcode_in_variant.append(
+                    (variants_dict[order_item["variant_id"]], order_item["id"])
+                )
+        len_update = len(update_barcode_in_variant)
+        print("update_barcode_in_variant len:", len_update)
+        update_order_item = """
+            UPDATE order_item
+            SET barcode = %s
+            WHERE id = %s
+        """
+        batch_size = 500
+        for i in range(0, len_update, batch_size):
+            lote = update_barcode_in_variant[i:i+batch_size]
+            cursor.executemany(update_order_item, lote)
+            connection.commit()
+            print(f"Inserted {i + len(lote)} of {len_update}...")
+        # cursor.executemany(update_order_item, update_barcode_in_variant)
+        # connection.commit()
 
     except Error as e:
         print(f"Error en la inserción: {e}")
         connection.rollback()
     finally:
         cursor.close()
+
+    end_time = time.time()
+    duration = end_time - init_time
+    print("Finish update order_items")
+    print(f"Execution time: {duration:.4f} seconds")
     return is_updated
 
 
@@ -163,13 +181,6 @@ async def update_inventory():
                 inventory_item_ids=inventory_item_ids,
                 location_ids=location_ids
             )
-            i = 0
-            for key, value in inventory_levels.items():
-                if i > 3:
-                    break
-                else:
-                    i += 1
-                    print("key", key, "value", value)
             print("inventory_levels", len(inventory_levels))
 
     #         # Insertar o actualizar productos, variantes e inventarios

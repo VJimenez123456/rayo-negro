@@ -128,13 +128,11 @@ async def update_or_create_many_products_service(
     cursor = connection.cursor(dictionary=True)
     is_created = False
     try:
-        print("total_variants<<<<<<<<<", len(total_variants))
-        print("total_variants<<<<<<<<<", total_variants[0])
-        print("total_productszzzzzzzzz", len(total_products))
-        print("total_productszzzzzzzzz", total_products[0])
+        print("total_variants", len(total_variants))
+        print("total_products", len(total_products))
         cursor.executemany(sql_variant_update, total_variants)
         cursor.executemany(sql_product_update, total_products)
-        # connection.commit()  # TODO: descomentar
+        connection.commit()  # TODO: descomentar
         is_created = True
     finally:
         cursor.close()
@@ -160,7 +158,7 @@ async def delete_many_products_service(products: List[DeleteProductSchema]):
         cursor.executemany(delete_product_variants, products_for_execute)
         # Luego eliminar el producto
         cursor.executemany(delete_product, products_for_execute)
-        # connection.commit()  # TODO: descomentar
+        connection.commit()  # TODO: descomentar
         is_deleted = True
     except Error as e:
         print(f"Error en la inserción: {e}")

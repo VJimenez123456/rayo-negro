@@ -189,6 +189,7 @@ async def update_inventory():
                 inventory_item_ids=inventory_item_ids,
                 location_ids=location_ids
             )
+            print("inventory_levels-obj", inventory_levels[0])
             print("inventory_levels", len(inventory_levels))
             inventories_schemas = [
                 InventorySchema(**item) for item in inventory_levels

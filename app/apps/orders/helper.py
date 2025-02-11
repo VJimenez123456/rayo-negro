@@ -2,10 +2,12 @@
 from .models import OrderSchema, LineItem
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from typing import List
+from typing import Dict, List
 import base64
 import requests
 from app.core.config import settings
+from app.database import get_db_connection
+
 
 sql_order_update = """
     INSERT INTO `order` (
@@ -79,11 +81,12 @@ def parser_order(order: OrderSchema) -> tuple:
     return order_obj
 
 
-def parser_items(order_id: int, items: List[LineItem]) -> List[tuple]:
+def parser_items(
+        order_id: int, items: List[LineItem], barcodes_dict: dict
+    ) -> List[tuple]:
     items_objs = []
     for item in items:
         variant_id = item.variant_id
-        barcode = ''  # preguntar
         validacion_sku = ''
         image_url = ''
         items_objs.append((
@@ -95,7 +98,7 @@ def parser_items(order_id: int, items: List[LineItem]) -> List[tuple]:
             item.quantity,
             item.price,
             item.sku,
-            barcode,
+            barcodes_dict.get(item.variant_id, "Unknown"),
             validacion_sku,
             image_url,
 
@@ -153,3 +156,25 @@ def fetch_return_status(order_id):
         else:
             return 'none'
     return 'none'
+
+
+def get_barcodes(items: List[LineItem]) -> Dict:
+    variants_id = [item.variant_id for item in items]
+    get_variants = f"""
+        SELECT variant_id, barcode
+        FROM product_variant
+        WHERE variant_id IN ({', '.join(['%s'] * len(variants_id))})
+        """
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    try:
+        variants_dict = {}
+        cursor.execute(get_variants, variants_id)
+        variants_objs = cursor.fetchall()
+        for var in variants_objs:
+            if var["variant_id"] not in variants_dict:
+                variants_dict[var["variant_id"]] = var["barcode"]
+        # connection.commit()
+    finally:
+        cursor.close()
+    return variants_dict

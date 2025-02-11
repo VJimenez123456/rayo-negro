@@ -99,6 +99,7 @@ async def update_barcode_in_orders():
             SELECT id, barcode, variant_id
             FROM order_item
             WHERE variant_id is not null
+            AND barcode = ''
             ORDER BY variant_id ASC;
         """
         cursor.execute(select_all_orders)
@@ -160,17 +161,15 @@ async def update_inventory():
         select_all_prod = "SELECT * FROM product;"
         cursor.execute(select_all_prod)
         result = cursor.fetchall()
-        print(f"Cantidad {len(result)}")
+        print(f"Total elements in db {len(result)}")
         # Get all locations
         locations = fetch_locations()
-        print("locations---->", locations)
         location_ids = get_location_ids(locations)
-        print("location_ids---->", location_ids)
 
         # Obtener productos activos
         logging.info("Obteniendo detalles de productos de Shopify...")
         products = fetch_shopify_products()
-        print("products---->", len(products))
+        print("Products in shopify:::", len(products))
 
         if products and len(products) > 0:
             # Obtener los inventory_item_ids para los niveles de inventario
@@ -189,7 +188,7 @@ async def update_inventory():
                 inventory_item_ids=inventory_item_ids,
                 location_ids=location_ids
             )
-            print("inventory_levels-obj", inventory_levels[0])
+            # print("inventory_levels-obj", inventory_levels[0])
             print("inventory_levels", len(inventory_levels))
             inventories_schemas = [
                 InventorySchema(**item) for item in inventory_levels

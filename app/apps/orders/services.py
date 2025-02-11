@@ -1,6 +1,7 @@
 from .models import OrderSchema
 from app.database import get_db_connection
 from .helper import (
+    get_barcodes,
     parser_order,
     parser_items,
     sql_items_update,
@@ -25,7 +26,8 @@ from .helper import (
 
 async def update_order_service(order: OrderSchema):
     order_obj = parser_order(order)
-    order_items = parser_items(order.id, order.line_items)
+    barcodes_dict = get_barcodes(order.line_items)
+    order_items = parser_items(order.id, order.line_items, barcodes_dict)
     connection = get_db_connection()
     cursor = connection.cursor(dictionary=True)
     is_updated = False

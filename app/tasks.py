@@ -27,6 +27,8 @@ logging.basicConfig(
 
 
 async def update_products() -> bool:
+    print("Init update update_products")
+    init_time = time.time()
     is_updated = False
     # connection
     connection = get_db_connection()
@@ -62,7 +64,7 @@ async def update_products() -> bool:
         await delete_many_products_service(delete_products_schema)
 
         # update or create productos
-        print("products_shopify", products_shopify[0])
+        # print("products_shopify", products_shopify[0])
         update_or_create_products_schema = [
             ProductSchema(**prod) for prod in products_shopify
         ]
@@ -74,6 +76,11 @@ async def update_products() -> bool:
         connection.rollback()
     finally:
         cursor.close()
+
+    end_time = time.time()
+    duration = end_time - init_time
+    print("Finish update update_products")
+    print(f"Execution time: {duration:.4f} seconds")
     return is_updated
 
 

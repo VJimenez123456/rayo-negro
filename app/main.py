@@ -32,11 +32,11 @@ app.include_router(inventory_router, prefix="/inventories", tags=["Inventories"]
 async def say_hello():
     is_update = False
     # update product
-    # is_update = await update_products()
+    is_update = await update_products()
     # update inventory
     # is_update = await update_inventory()
     # update barcode in orders
-    is_update = await update_barcode_in_orders()
+    # is_update = await update_barcode_in_orders()
     if not is_update:
         JSONResponse(
             {"message": "Error in update system"},

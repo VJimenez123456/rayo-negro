@@ -18,8 +18,10 @@ async def update_inventory_service(inventory: InventorySchema):
     result = cursor.fetchone()
     location_id = result["SucursalID"] if result else None
     # for barcode
+    print("inventory.inventory_item_id", inventory.inventory_item_id)
     cursor.execute(select_barcode_variant, (inventory.inventory_item_id,))
     result_barcode = cursor.fetchone()
+    print("result_barcode", result_barcode)
     barcode = result_barcode["barcode"] if result_barcode else 'Unknown'
 
     is_updated = False

@@ -15,3 +15,7 @@ select_all_locations = """
     """
 
 select_all_variants = "SELECT variant_id, barcode FROM product_variant"
+
+update_loc_var_in_inventory = """
+    UPDATE inventory SET stock = %s WHERE location_id = %s AND variant_id = %s;
+"""

@@ -2,12 +2,13 @@ from .models import InventorySchema
 from app.database import get_db_connection
 from .helper import (
     select_all_locations,
-    select_all_variants,
+    # select_all_variants,
     select_barcode_variant,
     sql_inventory_update,
+    update_loc_var_in_inventory,
 )
 from app.apps.locations.helper import select_location_id
-from typing import List
+from typing import Dict
 
 
 async def update_inventory_service(inventory: InventorySchema):
@@ -42,7 +43,7 @@ async def update_inventory_service(inventory: InventorySchema):
     return is_updated
 
 
-async def update_many_inventory_service(inventories: List[InventorySchema]):
+async def update_many_inventory_service(inventories: Dict):
     connection = get_db_connection()
     cursor = connection.cursor(dictionary=True)
     # for location
@@ -51,26 +52,24 @@ async def update_many_inventory_service(inventories: List[InventorySchema]):
     print("locations", locations)
     dict_locations = {}
     for location in locations:
-        dict_locations[location["location_id"]] = location["location_shopify"]
-    # for variants
-    cursor.execute(select_all_variants)
-    variants = cursor.fetchall()
-    print("variants", variants)
-    dict_variants = {}
-    for variant in variants:
-        dict_variants[variant["variant_id"]] = variant["barcode"]
+        dict_locations[location["location_shopify"]] = location["location_id"]
+
     update_inventories = []
-    for inventory in inventories:
-        update_inventories.append((
-            inventory.inventory_item_id,
-            dict_locations[inventory.location_id],
-            dict_variants[inventory.inventory_item_id],
-            inventory.available
-        ))
+    for variant_id, locations_stock in inventories.items():
+        for location_id, stock in locations_stock.items():
+            location_id = f"{location_id}"
+            if location_id in dict_locations:
+                update_inventories.append((
+                    stock,
+                    dict_locations[location_id],
+                    variant_id
+                ))
     is_updated = False
     try:
-        cursor.executemany(sql_inventory_update, update_inventories)
-        # connection.commit()  # TODO: descomentar
+        print("update_inventories", len(update_inventories))
+        print("update_inventories", update_inventories[:10])
+        cursor.executemany(update_loc_var_in_inventory, update_inventories)
+        connection.commit()  # TODO: descomentar
         is_updated = True
     finally:
         cursor.close()

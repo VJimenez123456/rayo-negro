@@ -3,12 +3,14 @@ import logging
 import time
 from datetime import datetime
 from .helper import (
+    delete_inventory,
     fetch_locations,
-    get_location_ids,
     fetch_shopify_products,
     fetch_inventory_levels,
+    get_location_ids,
     select_all_locations,
     select_inventory,
+    select_loc_var_in_inventory,
     update_location_in_inventory,
 )
 from app.database import get_db_connection
@@ -19,7 +21,6 @@ from app.apps.products.services import (
 )
 from app.apps.inventories.services import update_many_inventory_service
 from app.apps.products.models import DeleteProductSchema, ProductSchema
-from app.apps.inventories.models import InventorySchema
 
 
 #  Logging settings
@@ -152,9 +153,9 @@ async def update_barcode_in_orders_service() -> bool:
 
 
 async def update_inventory_service() -> bool:
-    mensaje = f"->Tarea ejecutada a las {datetime.now()}"
-    logging.info(mensaje)
-    print(mensaje)
+    print("Init update order_items")
+    init_time = time.time()
+    print(f"->Tarea ejecutada a las {datetime.now()}")
     is_updated = False
     # code
     try:
@@ -191,13 +192,9 @@ async def update_inventory_service() -> bool:
                 inventory_item_ids=inventory_item_ids,
                 location_ids=location_ids
             )
-            # print("inventory_levels-obj", inventory_levels[0])
             print("inventory_levels", len(inventory_levels))
-            inventories_schemas = [
-                InventorySchema(**item) for item in inventory_levels
-            ]
             is_updated = await update_many_inventory_service(
-                inventories_schemas)
+                inventory_levels)
 
     except Error as e:
         print(f"Error en la inserción: {e}")
@@ -206,6 +203,10 @@ async def update_inventory_service() -> bool:
     finally:
         cursor.close()
 
+    end_time = time.time()
+    duration = end_time - init_time
+    print("Finish update order_items")
+    print(f"Execution time: {duration:.4f} seconds")
     return is_updated
 
 
@@ -215,6 +216,8 @@ async def update_locations_in_inventory_service() -> bool:
     # connection
     connection = get_db_connection()
     cursor = connection.cursor(dictionary=True)
+    elements_update = 0
+    elements_delete = 0
     try:
         cursor.execute(select_all_locations)
         locations = cursor.fetchall()
@@ -227,15 +230,27 @@ async def update_locations_in_inventory_service() -> bool:
         cursor.execute(select_inventory)
         locations_in_inventory = cursor.fetchall()
         print("locations_in_inventory", len(locations_in_inventory))
-        update_list = []
         for item in locations_in_inventory:
-            if item["location_id"] in locations_dict:
-                update_list.append(
-                    (locations_dict[item["location_id"]], item["id"])
+            location_shopify = f"{item['location_id']}"
+            if location_shopify in locations_dict:
+                cursor.execute(
+                    select_loc_var_in_inventory,
+                    (item["location_id"], item["variant_id"])
                 )
-        print("update_list", update_list)
-        # cursor.executemany(update_location_in_inventory, )
-        # connection.commit()
+                result = cursor.fetchone()
+                if not result:
+                    elements_update += 1
+                    # print("UPDATE")
+                    cursor.execute(
+                        update_location_in_inventory,
+                        (locations_dict[location_shopify], item["id"])
+                    )
+                else:
+                    elements_delete += 1
+                    # print("DELETE")
+                    cursor.execute(delete_inventory, (item["id"],))
+                # connection.commit()
+
     except Error as e:
         print(f"Error en la inserción: {e}")
         connection.rollback()
@@ -243,5 +258,7 @@ async def update_locations_in_inventory_service() -> bool:
         cursor.close()
     end_time = time.time()
     duration = end_time - init_time
+    print(f"Total items updated: {elements_update}")
+    print(f"Total items deleted: {elements_delete}")
     print("Finish update order_items")
     print(f"Execution time: {duration:.4f} seconds")

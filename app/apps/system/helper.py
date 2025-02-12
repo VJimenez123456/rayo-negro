@@ -37,12 +37,21 @@ select_all_locations = """
 """
 
 select_inventory = """
-    SELECT id, location_id FROM inventory WHERE location_id > 13;
+    SELECT id, location_id, variant_id
+    FROM inventory
+    WHERE location_id > 13
+    ORDER BY id ASC;
+"""
+
+select_loc_var_in_inventory = """
+    SELECT id FROM inventory WHERE location_id = %s AND variant_id = %s;
 """
 
 update_location_in_inventory = """
     UPDATE inventory SET location_id = %s WHERE id = %s;
 """
+
+delete_inventory = """DELETE FROM inventory WHERE id = %s;"""
 
 
 def get_auth_headers(api_key: str, password: str):

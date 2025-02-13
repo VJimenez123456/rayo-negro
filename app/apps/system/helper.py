@@ -265,14 +265,11 @@ def fetch_shopify_products():
 def fetch_shopify_variants(variants: list) -> list:
     credentials = get_credentials()
     headers = credentials["headers"]
-    print("headers", headers)
     session = requests.Session()
     variants_shopify = []
     rate_limiter = RateLimiter(max_calls=4, period=1)
     for variant_id in variants:
         base_url = f"{credentials['base_url']}/variants/{variant_id}.json"
-        print("base_url", base_url)
-
         try:
             rate_limiter.wait()
             response = session.get(base_url, headers=headers)
@@ -283,13 +280,13 @@ def fetch_shopify_variants(variants: list) -> list:
                 fetched_variants = data.get('variant', {})
                 variants_shopify.append(fetched_variants)
             else:
-                logging.warning(f"Error inesperado al obtener variantes: {response.status_code} {response.text}.")
+                print(f"Error inesperado al obtener variantes: {response.status_code} {response.text}.")
         except requests.RequestException as e:
-            logging.warning(f"Error en la solicitud HTTP para productos.")
-            time.sleep(1)
+            print(f"Error en la solicitud HTTP para productos.")
+            time.sleep(3)
 
     session.close()
-    logging.info(f"Total de productos obtenidos: {len(variants)}")
+    print(f"Total de productos obtenidos: {len(variants)}")
     return variants_shopify
 
 

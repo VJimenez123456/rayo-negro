@@ -338,6 +338,7 @@ async def update_product_for_inventory_service() -> bool:
             (barcode, variant_key)
             for variant_key, barcode in barcode_variants.items()
         ]
+        print("list_barcode_variant", list_barcode_variant[:3])
         query_update = """
             UPDATE inventory
             SET barcode = %s

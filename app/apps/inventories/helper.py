@@ -14,7 +14,11 @@ select_all_locations = """
         FROM locations WHERE location_shopify is not null
     """
 
-select_all_variants = "SELECT variant_id, barcode FROM product_variant"
+select_all_variants = """
+    SELECT variant_id as id, barcode
+    FROM product_variant
+    WHERE barcode <> '' OR barcode is not null OR barcode = 'Unknown';
+"""
 
 update_loc_var_in_inventory = """
     UPDATE inventory SET stock = %s WHERE location_id = %s AND variant_id = %s;

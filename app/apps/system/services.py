@@ -186,7 +186,7 @@ async def update_barcode_in_inventory_service() -> bool:
                 )
         len_update = len(update_barcode_in_variant)
         print("update_barcode_in_variant len:", len_update)
-        print("update_barcode_in_variant--->", update_barcode_in_variant)
+        print("update_barcode_in_variant--->", update_barcode_in_variant[:3])
         # update_order_item = "UPDATE inventory SET barcode = %s WHERE id = %s"
         # batch_size = 500
         # for i in range(0, len_update, batch_size):

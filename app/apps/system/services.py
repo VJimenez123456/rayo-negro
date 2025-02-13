@@ -186,14 +186,17 @@ async def update_barcode_in_inventory_service() -> bool:
                 update_barcode_in_variant.append(
                     (variants_dict[inventory["variant_id"]], inventory["id"])
                 )
-        len_update = len(update_barcode_in_variant)
         update_order_item = "UPDATE inventory SET barcode = %s WHERE id = %s"
-        batch_size = 500
-        for i in range(0, len_update, batch_size):
-            lote = update_barcode_in_variant[i:i+batch_size]
-            cursor.executemany(update_order_item, lote)
-            connection.commit()
-            print(f"Inserted {i + len(lote)} of {len_update}...")
+        len_update = len(update_barcode_in_variant)
+        # batch_size = 500
+        # for i in range(0, len_update, batch_size):
+        #     lote = update_barcode_in_variant[i:i+batch_size]
+        #     cursor.executemany(update_order_item, lote)
+        #     connection.commit()
+        #     print(f"Inserted {i + len(lote)} of {len_update}...")
+        cursor.executemany(update_order_item, update_barcode_in_variant)
+        connection.commit()
+        print(f"Inserted {len_update} in inventory...")
 
     except Error as e:
         print(f"Error en la inserción: {e}")

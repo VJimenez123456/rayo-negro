@@ -311,6 +311,7 @@ async def update_product_for_inventory_service() -> bool:
             variants_shopify = fetch_shopify_variants(new_variants_in_shopify)
             created_number = 0
             updated_number = 0
+            print("variants_shopify", variants_shopify[:3])
             for var_shop in variants_shopify:
                 product_id = var_shop.get("product_id")
                 barcode_variants[var_shop["id"]] = var_shop.get("barcode", "")

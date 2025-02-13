@@ -7,6 +7,7 @@ from .services import (
     # update_locations_in_inventory_service,
     update_barcode_in_inventory_service,
     update_product_for_inventory_service,
+    simple_update_barcode_in_inventory_service,
 )
 from starlette.responses import JSONResponse
 
@@ -25,6 +26,19 @@ router = APIRouter()
 #     return {
 #         "message": "Successfully updated inventory",
 #     }
+
+
+@router.get("/simple_inventory_barcode")
+async def simple_update_barcode_in_inventory():
+    is_updated = await simple_update_barcode_in_inventory_service()
+    if not is_updated:
+        JSONResponse(
+            {"message": "Error in update barcode-inventory"},
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
+    return {
+        "message": "Successfully simple updated barcode-inventory",
+    }
 
 
 @router.get("/inventory_barcode")

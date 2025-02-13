@@ -96,6 +96,57 @@ async def update_products_service() -> bool:
     return is_updated
 
 
+async def simple_update_barcode_in_inventory_service() -> bool:
+    print("Init update order_items")
+    init_time = time.time()
+    is_updated = False
+    # connection
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+
+    try:
+        select_all_inventories = """
+            SELECT id, barcode, variant_id
+            FROM inventory
+            WHERE barcode = 'Unknown' OR barcode = ''
+            ORDER BY id ASC;
+        """
+        cursor.execute(select_all_inventories)
+        inventories_in_bd = cursor.fetchall()
+        print("Orders in bd:", len(inventories_in_bd))
+        print("inventories_in_bd", inventories_in_bd)
+        count_update = 0
+        for item in inventories_in_bd:
+            select_barcode = f"""
+                SELECT barcode, variant_id
+                FROM product_variant
+                WHERE variant_id = {item["variant_id"]}
+            """
+            cursor.execute(select_barcode)
+            variant = cursor.fetchone()
+            if variant:
+                update_query = """
+                    UPDATE inventory SET barcode = %s WHERE id = %s
+                """
+                cursor.execute(update_query, (variant["barcode"], item["id"]))
+                connection.commit()
+                count_update += 1
+            time.sleep(0.5)
+
+    except Error as e:
+        print(f"Error en la inserción: {e}")
+        connection.rollback()
+    finally:
+        cursor.close()
+
+    end_time = time.time()
+    duration = end_time - init_time
+    print("Finish update order_items")
+    print(f"Updated {count_update} elements")
+    print(f"Execution simple_update time: {duration:.4f} seconds")
+    return is_updated
+
+
 async def update_barcode_in_orders_service() -> bool:
     print("Init update order_items")
     init_time = time.time()

@@ -306,8 +306,11 @@ async def update_product_for_inventory_service() -> bool:
             new_variants_in_shopify = (
                 list(set(all_variant_ids) - set(variants_products_list))
             )
-            print("new_variants_in_shopify", new_variants_in_shopify)
+            print("new_variants_in_shopify->len", len(new_variants_in_shopify))
+            print("new_variants_in_shopify", new_variants_in_shopify[:3])
             variants_shopify = fetch_shopify_variants(new_variants_in_shopify)
+            created_number = 0
+            updated_number = 0
             for var_shop in variants_shopify:
                 product_id = var_shop.get("product_id")
                 barcode_variants[var_shop["id"]] = var_shop.get("barcode", "")
@@ -319,10 +322,14 @@ async def update_product_for_inventory_service() -> bool:
                     cursor.execute(query)
                     products_in_db = cursor.fetchone()
                     if products_in_db:
+                        created_number += 1
                         await create_variant_service(Variant(**var_shop))
                     else:
+                        updated_number += 1
                         product_shopify = fetch_shopify_one_product(product_id)
                         await update_product_service(product_shopify)
+            print("created_number", created_number)
+            print("updated_number", updated_number)
         else:
             print("Update 0 variants")
 

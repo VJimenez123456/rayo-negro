@@ -70,7 +70,7 @@ async def update_many_inventory_service(inventories: Dict):
             location_id = f"{location_id}"
             if location_id in dict_locations:
                 barcode = dict_variants.get(f"{variant_id}", "")
-                print("barcode", barcode)
+                # print("barcode", barcode)
                 update_inventories.append((
                     variant_id,
                     location_id,

@@ -306,6 +306,7 @@ async def update_product_for_inventory_service() -> bool:
             new_variants_in_shopify = (
                 list(set(all_variant_ids) - set(variants_products_list))
             )
+            print("new_variants_in_shopify", new_variants_in_shopify)
             variants_shopify = fetch_shopify_variants(new_variants_in_shopify)
             for var_shop in variants_shopify:
                 product_id = var_shop.get("product_id")

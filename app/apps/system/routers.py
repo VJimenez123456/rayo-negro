@@ -1,7 +1,7 @@
 from fastapi import APIRouter, status
 # from starlette.responses import JSONResponse
 from .services import (
-    # update_inventory_service,
+    update_inventory_service,
     # update_products_service,
     # update_barcode_in_orders_service,
     # update_locations_in_inventory_service,
@@ -15,17 +15,17 @@ from starlette.responses import JSONResponse
 router = APIRouter()
 
 
-# @router.get("/inventory")
-# async def update_inventory():
-#     is_updated = await update_inventory_service()
-#     if not is_updated:
-#         JSONResponse(
-#             {"message": "Error in update inventory"},
-#             status_code=status.HTTP_400_BAD_REQUEST
-#         )
-#     return {
-#         "message": "Successfully updated inventory",
-#     }
+@router.get("/inventory")
+async def update_inventory():
+    is_updated = await update_inventory_service()
+    if not is_updated:
+        JSONResponse(
+            {"message": "Error in update inventory"},
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
+    return {
+        "message": "Successfully updated inventory",
+    }
 
 
 @router.get("/simple_inventory_barcode")

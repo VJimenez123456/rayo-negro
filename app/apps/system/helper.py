@@ -262,6 +262,58 @@ def fetch_shopify_products():
     return products
 
 
+def fetch_shopify_variants(variants: list) -> list:
+    credentials = get_credentials()
+    headers = credentials["headers"]
+    session = requests.Session()
+    variants_shopify = []
+    rate_limiter = RateLimiter(max_calls=4, period=1)
+    for variant_id in variants:
+        base_url = f"{credentials['base_url']}/variants/{variant_id}.json"
+
+        try:
+            rate_limiter.wait()
+            response = session.get(base_url, headers=headers)
+            log_api_call(response)
+            if response.status_code == 200:
+                data = response.json()
+                fetched_variants = data.get('variant', {})
+                variants_shopify.append(fetched_variants)
+            else:
+                logging.warning(f"Error inesperado al obtener variantes: {response.status_code} {response.text}.")
+        except requests.RequestException as e:
+            logging.warning(f"Error en la solicitud HTTP para productos.")
+            time.sleep(1)
+
+    session.close()
+    logging.info(f"Total de productos obtenidos: {len(variants)}")
+    return variants_shopify
+
+
+def fetch_shopify_one_product(product_id: int) -> dict:
+    credentials = get_credentials()
+    headers = credentials["headers"]
+    session = requests.Session()
+    rate_limiter = RateLimiter(max_calls=4, period=1)
+    base_url = f"{credentials['base_url']}/products/{product_id}.json"
+
+    try:
+        rate_limiter.wait()
+        response = session.get(base_url, headers=headers)
+        log_api_call(response)
+        if response.status_code == 200:
+            data = response.json()
+            fetched_variants = data.get('product', {})
+        else:
+            logging.warning(f"Error inesperado al obtener variantes: {response.status_code} {response.text}.")
+    except requests.RequestException as e:
+        logging.warning(f"Error en la solicitud HTTP para productos.")
+        time.sleep(1)
+
+    session.close()
+    return fetched_variants
+
+
 # Función para obtener niveles de inventario desde Shopify
 def fetch_inventory_levels(inventory_item_ids, location_ids):
     """

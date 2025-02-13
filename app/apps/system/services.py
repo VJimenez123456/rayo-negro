@@ -4,9 +4,11 @@ import time
 from datetime import datetime
 from .helper import (
     delete_inventory,
-    fetch_locations,
-    fetch_shopify_products,
     fetch_inventory_levels,
+    fetch_locations,
+    fetch_shopify_one_product,
+    fetch_shopify_products,
+    fetch_shopify_variants,
     get_location_ids,
     select_all_locations,
     select_inventory,
@@ -16,11 +18,15 @@ from .helper import (
 from app.database import get_db_connection
 from mysql.connector import Error
 from app.apps.products.services import (
+    create_variant_service,
     delete_many_products_service,
-    update_or_create_many_products_service
+    update_or_create_many_products_service,
+    update_product_service,
 )
 from app.apps.inventories.services import update_many_inventory_service
-from app.apps.products.models import DeleteProductSchema, ProductSchema
+from app.apps.products.models import (
+    DeleteProductSchema, ProductSchema, Variant
+)
 
 
 #  Logging settings
@@ -160,7 +166,6 @@ async def update_barcode_in_inventory_service() -> bool:
     connection = get_db_connection()
     cursor = connection.cursor(dictionary=True)
     try:
-        logging.info("Obteniendo detalles de pedidos de base de datos...")
         select_all_inventories = """
             SELECT id, barcode, variant_id
             FROM inventory
@@ -197,6 +202,90 @@ async def update_barcode_in_inventory_service() -> bool:
         cursor.executemany(update_order_item, update_barcode_in_variant)
         connection.commit()
         print(f"Inserted {len_update} in inventory...")
+
+    except Error as e:
+        print(f"Error en la inserción: {e}")
+        connection.rollback()
+    finally:
+        cursor.close()
+
+    end_time = time.time()
+    duration = end_time - init_time
+    print("Finish update order_items")
+    print(f"Execution time: {duration:.4f} seconds")
+    return is_updated
+
+
+async def update_product_for_inventory_service() -> bool:
+    print("Init update order_items")
+    init_time = time.time()
+    is_updated = False
+    # connection
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    try:
+        select_all_inventories = """
+            SELECT id, barcode, variant_id
+            FROM inventory
+            WHERE barcode = 'Unknown' OR barcode = ''
+            ORDER BY id ASC;
+        """
+        cursor.execute(select_all_inventories)
+        inventories_in_bd = cursor.fetchall()
+        print("Inventories in bd:", len(inventories_in_bd))
+        barcode_variants = {}
+        all_variant_ids = []
+        for inventory in inventories_in_bd:
+            all_variant_ids.append(inventory["variant_id"])
+            barcode_variants.update({inventory["variant_id"]: ""})
+        new_variants_in_shopify = []
+        if len(all_variant_ids) > 0:
+            get_variants = f"""
+                SELECT variant_id as id, barcode
+                FROM product_variant
+                WHERE variant_id
+                IN ({', '.join(map(str, all_variant_ids))})
+            """
+            cursor.execute(get_variants)
+            variants_products_in_db = cursor.fetchall()
+            variants_products_list = []
+            for variants in variants_products_in_db:
+                variants_products_list.append(variants["id"])
+                barcode_variants[variants["id"]] = variants["barcode"]
+
+            new_variants_in_shopify = (
+                list(set(all_variant_ids) - set(variants_products_list))
+            )
+            variants_shopify = fetch_shopify_variants(new_variants_in_shopify)
+            for var_shop in variants_shopify:
+                product_id = var_shop.get("product_id")
+                barcode_variants[var_shop["id"]] = var_shop.get("barcode", "")
+                if product_id:
+                    query = f"""
+                        SELECT product_id FROM product
+                        WHERE product_id = {product_id};
+                    """
+                    cursor.execute(query)
+                    products_in_db = cursor.fetchone()
+                    if products_in_db:
+                        await create_variant_service(Variant(**var_shop))
+                    else:
+                        product_shopify = fetch_shopify_one_product(product_id)
+                        await update_product_service(product_shopify)
+        else:
+            print("Update 0 variants")
+
+        list_barcode_variant = [
+            (barcode, variant_key)
+            for variant_key, barcode in barcode_variants.items()
+        ]
+        query_update = """
+            UPDATE inventory
+            SET barcode = %s
+            WHERE variant_id = %s;
+        """
+        cursor.executemany(query_update, list_barcode_variant)
+        connection.commit()
 
     except Error as e:
         print(f"Error en la inserción: {e}")

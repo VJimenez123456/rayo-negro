@@ -1,4 +1,4 @@
-from .models import DeleteProductSchema, ProductSchema
+from .models import DeleteProductSchema, ProductSchema, Variant
 from .helper import get_product_and_variants
 from app.database import get_db_connection
 from .helper import (
@@ -166,3 +166,25 @@ async def delete_many_products_service(products: List[DeleteProductSchema]):
     finally:
         cursor.close()
     return is_deleted
+
+
+async def create_variant_service(variant: Variant) -> bool:
+    new_variant = (
+        variant.id,
+        variant.product_id,
+        clean_string(variant.title),
+        clean_string(variant.sku),
+        variant.price or '0.00',
+        variant.inventory_quantity or 0,
+        clean_string(variant.barcode)
+    )
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    is_created = False
+    try:
+        cursor.execute(sql_variant_create, new_variant)
+        connection.commit()
+        is_created = True
+    finally:
+        cursor.close()
+    return is_created

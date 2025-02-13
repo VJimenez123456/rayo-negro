@@ -114,7 +114,6 @@ async def simple_update_barcode_in_inventory_service() -> bool:
         cursor.execute(select_all_inventories)
         inventories_in_bd = cursor.fetchall()
         print("Orders in bd:", len(inventories_in_bd))
-        print("inventories_in_bd", inventories_in_bd)
         count_update = 0
         for item in inventories_in_bd:
             select_barcode = f"""

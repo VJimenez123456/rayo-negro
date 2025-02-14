@@ -497,12 +497,14 @@ async def delete_products_not_exists_service() -> bool:
         variant_in_shopy_list = []
         variant_in_shopy_dict = {}
         for item in variant_in_shopy:
+            # print("item", item)
             variant_in_shopy_list.append(item["id"])
             variant_in_shopy_dict[item["id"]] = item["product_id"]
 
         new_variants_in_shopify = (
                 list(set(variants_in_db_list) - set(variant_in_shopy_list))
             )
+        print("variant_in_shopy_list:", len(variant_in_shopy_list))
         print("new_variants_in_shopify-len:", len(new_variants_in_shopify))
         print("variant_in_shopy_dict", variant_in_shopy_dict)
         for var in new_variants_in_shopify:

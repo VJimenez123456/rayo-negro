@@ -278,8 +278,8 @@ def fetch_shopify_variants(variants: list) -> list:
                 data = response.json()
                 fetched_variants = data.get('variant', {})
                 variants_shopify.append(fetched_variants)
-            else:
-                print(f"Error inesperado al obtener variantes: {response.status_code} {response.text}.")
+            # else:
+            #     print(f"Error inesperado al obtener variantes: {response.status_code} {response.text}.")
         except requests.RequestException as e:
             print(f"Error en la solicitud HTTP para productos.")
             time.sleep(3)

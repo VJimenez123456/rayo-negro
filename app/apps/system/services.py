@@ -504,26 +504,27 @@ async def delete_products_not_exists_service() -> bool:
                 list(set(variants_in_db_list) - set(variant_in_shopy_list))
             )
         print("new_variants_in_shopify-len:", len(new_variants_in_shopify))
-
+        print("variant_in_shopy_dict", variant_in_shopy_dict)
         for var in new_variants_in_shopify:
-            product_id = variant_in_shopy_dict[var]
-            select_vars_prod = f"""
-                SELECT variant_id
-                FROM product_variant
-                WHERE product_id = {product_id}
-            """
-            cursor.execute(select_vars_prod)
-            variants_for_product = cursor.fetchall()
-            len_variants_for_product = len(variants_for_product)
-            if len_variants_for_product > 1:
-                delete_sql = f"""
-                    DELETE FROM product_variant
-                    WHERE variant_id = {var};
+            if var in variant_in_shopy_dict:
+                product_id = variant_in_shopy_dict[var]
+                select_vars_prod = f"""
+                    SELECT variant_id
+                    FROM product_variant
+                    WHERE product_id = {product_id}
                 """
-                cursor.execute(delete_sql)
-                connection.commit()
-            elif len_variants_for_product == 1:
-                delete_product_service(DeleteProductSchema(id=product_id))
+                cursor.execute(select_vars_prod)
+                variants_for_product = cursor.fetchall()
+                len_variants_for_product = len(variants_for_product)
+                if len_variants_for_product > 1:
+                    delete_sql = f"""
+                        DELETE FROM product_variant
+                        WHERE variant_id = {var};
+                    """
+                    cursor.execute(delete_sql)
+                    connection.commit()
+                elif len_variants_for_product == 1:
+                    delete_product_service(DeleteProductSchema(id=product_id))
         is_updated = True
     except Error as e:
         print(f"Error en la inserción: {e}")

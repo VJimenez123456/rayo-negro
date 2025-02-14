@@ -275,7 +275,6 @@ def fetch_shopify_variants(variants: list) -> list:
             response = session.get(base_url, headers=headers)
             log_api_call(response)
             if response.status_code == 200:
-                print("200")
                 data = response.json()
                 fetched_variants = data.get('variant', {})
                 variants_shopify.append(fetched_variants)
@@ -381,6 +380,86 @@ def fetch_inventory_levels(inventory_item_ids, location_ids):
             continue
 
         logging.info(f"Procesado lote de inventarios. Total hasta ahora: {len(inventory_dict)}")
+
+    session.close()
+    return inventory_dict
+
+
+# Función para obtener niveles de inventario desde Shopify
+def fetch_all_inventory_levels():
+    """
+    Obtiene los niveles de inventario para una lista de inventory_item_ids y location_ids,
+    retornando un diccionario de {inventory_item_id: {location_id: available, ...}, ...}.
+    """
+
+    credentials = get_credentials()
+    base_url = f"{credentials['base_url']}/inventory_levels.json?locationids=66148433965"
+    limit = 250  # Máximo permitido por Shopify
+    url = f"{base_url}?limit={limit}"
+    print("url--->:", url)
+    headers = credentials["headers"]
+    inventory_dict = {}
+    session = requests.Session()
+    rate_limiter = RateLimiter(max_calls=4, period=1)
+    max_retries = 5
+    backoff_factor = 2
+    max_wait_time = 60
+    inventory_levels_list = []
+    wait_time = max_wait_time
+
+    # while url:
+    #     for attempt in range(max_retries):
+    try:
+        rate_limiter.wait()
+        response = session.get(url, headers=headers)
+        print("response.json()", response.json())
+        log_api_call(response)
+        if response.status_code == 200:
+            data = response.json()
+            inventory_levels = data.get('inventory_levels', [])
+            inventory_levels_list.extend(inventory_levels)
+            for level in inventory_levels:
+                inventory_item_id = level['inventory_item_id']
+                location_id = level['location_id']
+                available = level.get('available', 0)
+                if inventory_item_id not in inventory_dict:
+                    inventory_dict[inventory_item_id] = {}
+                inventory_dict[inventory_item_id][location_id] = available
+                print(f"Inventory Item ID: {inventory_item_id}, Location ID: {location_id}, Available: {available}")
+            # Manejar paginación
+            link_header = response.headers.get('Link')
+            print("link_header", link_header)
+            # if link_header:
+            #     links = link_header.split(',')
+            #     url = None
+            #     for link in links:
+            #         if 'rel="next"' in link:
+            #             start = link.find('<') + 1
+            #             end = link.find('>')
+            #             if start > 0 and end > start:
+            #                 url = link[start:end]
+            #             break
+            # else:
+            #     url = None
+            # break
+        elif response.status_code == 422:
+            print(f"422: Error al obtener niveles de inventario: {response.text}")
+        elif response.status_code == 429:
+            print(f"429: Error al obtener niveles de inventario: {response.text}")
+            # if handle_rate_limiting(response, attempt, backoff_factor, max_wait_time):
+            #     continue
+        else:
+            # print(f"Error al obtener niveles de inventario (intento {attempt+1}): {response.status_code} {response.text}. Reintentando.")
+            # wait_time = min(backoff_factor ** attempt * 5, max_wait_time)
+            print(f"Esperando {wait_time} segundos antes de reintentar.")
+            time.sleep(wait_time)
+    except requests.RequestException as e:
+        # wait_time = min(backoff_factor ** attempt * 5, max_wait_time)
+        # print(f"Error en la solicitud HTTP para inventarios (intento {attempt+1}): {e}. Reintentando después de {wait_time} segundos.")
+        time.sleep(wait_time)
+    print("inventory_levels_list", len(inventory_levels_list))
+    print("inventory_levels_list", inventory_levels_list)
+    print(f"Procesado lote de inventarios. Total hasta ahora: {len(inventory_dict)}")
 
     session.close()
     return inventory_dict

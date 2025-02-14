@@ -4,6 +4,7 @@ import time
 from datetime import datetime
 from .helper import (
     delete_inventory,
+    # fetch_all_inventory_levels,
     fetch_inventory_levels,
     fetch_locations,
     fetch_shopify_one_product,
@@ -22,6 +23,7 @@ from app.apps.products.services import (
     delete_many_products_service,
     update_or_create_many_products_service,
     update_product_service,
+    delete_product_service,
 )
 from app.apps.inventories.services import update_many_inventory_service
 from app.apps.products.models import (
@@ -470,3 +472,66 @@ async def update_locations_in_inventory_service() -> bool:
     print(f"Total items deleted: {elements_delete}")
     print("Finish update order_items")
     print(f"Execution time: {duration:.4f} seconds")
+
+
+async def delete_products_not_exists_service() -> bool:
+    print("Init delete_products_not_exists_service")
+    init_time = time.time()
+    is_updated = False
+    # connection
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    try:
+        inventory_db = """
+            SELECT id, barcode, variant_id
+            FROM inventory
+            WHERE barcode = 'Unknown' OR barcode = ''
+            ORDER BY id ASC;
+        """
+        cursor.execute(inventory_db)
+        data_inventory_db = cursor.fetchall()
+        print("Inventories in bd:", len(data_inventory_db))
+        variants_in_db_list = [ele["variant_id"] for ele in data_inventory_db]
+        variant_in_shopy = fetch_shopify_variants(variants_in_db_list)
+        print("variant_in_shopy", len(variant_in_shopy))
+        variant_in_shopy_list = []
+        variant_in_shopy_dict = {}
+        for item in variant_in_shopy:
+            variant_in_shopy_list.append(item["id"])
+            variant_in_shopy_dict[item["id"]] = item["product_id"]
+
+        new_variants_in_shopify = (
+                list(set(variants_in_db_list) - set(variant_in_shopy_list))
+            )
+        print("new_variants_in_shopify-len:", len(new_variants_in_shopify))
+
+        for var in new_variants_in_shopify:
+            product_id = variant_in_shopy_dict[var]
+            select_vars_prod = f"""
+                SELECT variant_id
+                FROM product_variant
+                WHERE product_id = {product_id}
+            """
+            cursor.execute(select_vars_prod)
+            variants_for_product = cursor.fetchall()
+            len_variants_for_product = len(variants_for_product)
+            if len_variants_for_product > 1:
+                delete_sql = f"""
+                    DELETE FROM product_variant
+                    WHERE variant_id = {var};
+                """
+                cursor.execute(delete_sql)
+                connection.commit()
+            elif len_variants_for_product == 1:
+                delete_product_service(DeleteProductSchema(id=product_id))
+        is_updated = True
+    except Error as e:
+        print(f"Error en la inserción: {e}")
+        connection.rollback()
+    finally:
+        cursor.close()
+    end_time = time.time()
+    duration = end_time - init_time
+    print("Finish delete_products_not_exists_service")
+    print(f"Execution time: {duration:.4f} seconds")
+    return is_updated

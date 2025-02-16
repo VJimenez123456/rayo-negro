@@ -8,8 +8,9 @@ from .helper import (
     fetch_inventory_levels,
     fetch_locations,
     fetch_shopify_one_product,
-    fetch_shopify_products,
+    # fetch_shopify_products,
     fetch_shopify_variants,
+    fetch_shopify_variants_for_location,
     get_location_ids,
     select_all_locations,
     select_inventory,
@@ -24,11 +25,15 @@ from app.apps.products.services import (
     update_or_create_many_products_service,
     update_product_service,
     delete_product_service,
+    get_all_products_in_db,
+    get_variants_in_db,
 )
 from app.apps.inventories.services import update_many_inventory_service
+from app.apps.locations.services import get_all_locations_in_db
 from app.apps.products.models import (
     DeleteProductSchema, ProductSchema, Variant
 )
+from app.apps.products.helper import get_products_in_shopify
 
 
 #  Logging settings
@@ -45,51 +50,40 @@ async def update_products_service() -> bool:
     init_time = time.time()
     is_updated = False
     # connection
-    connection = get_db_connection()
-    cursor = connection.cursor(dictionary=True)
-    try:
-        logging.info("Obteniendo detalles de productos de base de datos...")
-        select_all_prod = "SELECT * FROM product;"
-        cursor.execute(select_all_prod)
-        products_in_bd = cursor.fetchall()
-        dict_products_in_db = {}
-        for prod in products_in_bd:
-            dict_products_in_db[prod["product_id"]] = prod
-        print(f"Amount of product in database: {len(products_in_bd)}")
+    print("Obteniendo detalles de productos de base de datos...")
+    products_in_bd = await get_all_products_in_db()
+    dict_products_in_db = {}
+    for prod in products_in_bd:
+        dict_products_in_db[prod["product_id"]] = prod
+    print(f"Amount of product in database: {len(products_in_bd)}")
 
-        # Get productos
-        logging.info("Obteniendo detalles de productos de Shopify...")
-        products_shopify = fetch_shopify_products()
-        print(f"Amount of product in shofify: {len(products_shopify)}")
-        dict_products_in_shopify = {}
-        for prod_shopi in products_shopify:
-            dict_products_in_shopify[prod_shopi["id"]] = prod_shopi
-        delete_products = []
-        for key, value in dict_products_in_db.items():
-            if key not in dict_products_in_shopify:
-                delete_products.append(value)
-        print(f"Total products for delete {len(delete_products)}")
+    # Get productos
+    print("Obteniendo detalles de productos de Shopify...")
+    products_shopify = get_products_in_shopify()
+    print(f"Amount of product in shofify: {len(products_shopify)}")
+    dict_products_in_shopify = {}
+    for prod_shopi in products_shopify:
+        dict_products_in_shopify[prod_shopi["id"]] = prod_shopi
+    delete_products = []
+    for key, value in dict_products_in_db.items():
+        if key not in dict_products_in_shopify:
+            delete_products.append(value)
+    print(f"Total products for delete {len(delete_products)}")
 
-        # delete products
-        delete_products_schema = [
-            DeleteProductSchema(id=prod_del["product_id"])
-            for prod_del in delete_products
-        ]
-        await delete_many_products_service(delete_products_schema)
+    # delete products
+    delete_products_schema = [
+        DeleteProductSchema(id=prod_del["product_id"])
+        for prod_del in delete_products
+    ]
+    await delete_many_products_service(delete_products_schema)
 
-        # update or create productos
-        # print("products_shopify", products_shopify[0])
-        update_or_create_products_schema = [
-            ProductSchema(**prod) for prod in products_shopify
-        ]
-        await update_or_create_many_products_service(
-            update_or_create_products_schema)
-
-    except Error as e:
-        print(f"Error en la inserción: {e}")
-        connection.rollback()
-    finally:
-        cursor.close()
+    # update or create productos
+    # print("products_shopify", products_shopify[0])
+    update_or_create_products_schema = [
+        ProductSchema(**prod) for prod in products_shopify
+    ]
+    await update_or_create_many_products_service(
+        update_or_create_products_schema)
 
     end_time = time.time()
     duration = end_time - init_time
@@ -536,5 +530,77 @@ async def delete_products_not_exists_service() -> bool:
     end_time = time.time()
     duration = end_time - init_time
     print("Finish delete_products_not_exists_service")
+    print(f"Execution time: {duration:.4f} seconds")
+    return is_updated
+
+
+async def update_variants_for_locations_service() -> bool:
+    print("Init delete_products_not_exists_service")
+    init_time = time.time()
+    is_updated = False
+
+    # get locations
+    locations_in_db = await get_all_locations_in_db()
+    locations_ids = [
+        location["location_shopify"]
+        for location in locations_in_db
+    ]
+    # inventory in shopify
+    inventories = []
+    for location in locations_ids:
+        inventories.extend(
+            fetch_shopify_variants_for_location(location))
+        time.sleep(3)
+    print("Total inventories all locations:", len(inventories))
+    all_iventory = {}
+    for level in inventories:
+        inventory_item_id = level['inventory_item_id']
+        location_id = level['location_id']
+        available = level.get('available', 0)
+        if inventory_item_id not in all_iventory:
+            all_iventory[inventory_item_id] = {}
+        all_iventory[inventory_item_id][location_id] = available
+    variants_ids_in_shopify = [var_id for var_id in all_iventory.keys()]
+    print("Total variants in shopify", len(variants_ids_in_shopify))
+
+    # inventory in db
+    variants_db = await get_variants_in_db()
+    variants_db_dict = {}
+    variants_ids_in_db = []
+    for var in variants_db:
+        id = var["id"]
+        if id not in variants_db_dict:
+            variants_db_dict[id] = 0
+        variants_db_dict[id] = var["barcode"]
+        variants_ids_in_db.append(id)
+    print("Total variants in db:", len(variants_ids_in_db))
+
+    # create, update or delete
+    set_shopy = set(variants_ids_in_shopify)
+    set_db = set(variants_ids_in_db)
+
+    delete = list(set_db - set_shopy)
+    create = list(set_shopy - set_db)
+    print("delete", len(delete))
+    print("create", len(create))
+
+    # end
+    end_time = time.time()
+    duration = end_time - init_time
+    print("Finish delete_products_not_exists_service")
+    print(f"Execution time: {duration:.4f} seconds")
+    return is_updated
+
+
+async def get_products_in_shopify_service() -> bool:
+    print("Init update get_products")
+    init_time = time.time()
+    is_updated = False
+    product_shopify = get_products_in_shopify()
+    # print("product_shopify", product_shopify)
+    print("product_shopify", len(product_shopify))
+    end_time = time.time()
+    duration = end_time - init_time
+    print("Finish update get_products")
     print(f"Execution time: {duration:.4f} seconds")
     return is_updated

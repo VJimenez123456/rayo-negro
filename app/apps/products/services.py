@@ -130,10 +130,13 @@ async def update_or_create_many_products_service(
     try:
         print("total_variants", len(total_variants))
         print("total_products", len(total_products))
-        cursor.executemany(sql_variant_update, total_variants)
         cursor.executemany(sql_product_update, total_products)
-        connection.commit()  # TODO: descomentar
+        cursor.executemany(sql_variant_update, total_variants)
+        connection.commit()
         is_created = True
+    except Error as e:
+        print(f"Error en la inserción: {e}")
+        connection.rollback()
     finally:
         cursor.close()
     return is_created
@@ -153,7 +156,6 @@ async def delete_many_products_service(products: List[DeleteProductSchema]):
                 products_for_delete.append(product)
 
         products_for_execute = [(prod.id,) for prod in products_for_delete]
-        print("products_for_execute", products_for_execute)
         # Primero eliminar las variantes asociadas al producto
         cursor.executemany(delete_product_variants, products_for_execute)
         # Luego eliminar el producto
@@ -188,3 +190,40 @@ async def create_variant_service(variant: Variant) -> bool:
     finally:
         cursor.close()
     return is_created
+
+
+async def get_all_products_in_db() -> list:
+    products_in_bd = []
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)
+        select_all_prod = "SELECT * FROM product;"
+        cursor.execute(select_all_prod)
+        products_in_bd = cursor.fetchall()
+    except Error as e:
+        print(f"Error get products {e}")
+        connection.rollback()
+    finally:
+        cursor.close()
+    return products_in_bd
+
+
+async def get_variants_in_db() -> list:
+    variants = []
+    try:
+        # connection
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)
+        get_variants = """
+            SELECT variant_id as id, barcode
+            FROM product_variant
+            ORDER BY variant_id ASC
+        """
+        cursor.execute(get_variants)
+        variants = cursor.fetchall()
+    except Error as e:
+        print(f"Error get products {e}")
+        connection.rollback()
+    finally:
+        cursor.close()
+    return variants

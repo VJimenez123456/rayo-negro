@@ -6,6 +6,7 @@ from .helper import (
     # sql_location_create,
     sql_location_update
 )
+from mysql.connector import Error
 
 
 # async def create_location_service(location: LocationSchema):
@@ -53,3 +54,24 @@ async def update_location_service(location: LocationSchema):
 #         finally:
 #             cursor.close()
 #     return is_deleted
+
+
+async def get_all_locations_in_db() -> list:
+    locations_in_db = []
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)
+        locations_sql = """
+            SELECT SucursalID, location_shopify
+            FROM locations
+            WHERE location_shopify is not null
+            ORDER BY SucursalID ASC;
+        """
+        cursor.execute(locations_sql)
+        locations_in_db = cursor.fetchall()
+    except Error as e:
+        print(f"Error get products {e}")
+        connection.rollback()
+    finally:
+        cursor.close()
+    return locations_in_db

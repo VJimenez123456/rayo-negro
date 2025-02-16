@@ -1,6 +1,13 @@
 # flake8: noqa
-from .models import ProductSchema, Variant
-from typing import List
+from .models import ProductSchema  #, Variant
+# from typing import List
+from app.common.utils import (
+    get_credentials_shopify,
+    get_link_next,
+    log_api_call,
+    RateLimiter,
+)
+import requests
 
 
 sql_product_create = """
@@ -59,3 +66,35 @@ def get_product_and_variants(product: ProductSchema) -> tuple:
             clean_string(variant.barcode)
         ))
     return new_product, variant_values
+
+
+def get_products_in_shopify() -> list:
+    products = []
+    base_url, headers = get_credentials_shopify()
+    url = f"{base_url}/products.json?limit=250"
+    rate_limiter = RateLimiter(max_calls=4, period=1)
+    session = requests.Session()
+    products = []
+
+    while url:
+        try:
+            rate_limiter.wait()
+            response = session.get(url, headers=headers)
+            # log_api_call(response)
+            if response.status_code == 200:
+                data = response.json()
+                fetched_products = data.get('products', [])
+                products.extend(fetched_products)
+                # pagination manager
+                link_header = response.headers.get('Link')
+                if link_header:
+                    url = get_link_next(link_header)
+                else:
+                    url = None
+            else:
+                print(f"Error inesperado al obtener productos: {response.status_code} {response.text}.")
+        except requests.RequestException as e:
+            print(f"Error en la solicitud HTTP para productos.")
+            break
+    session.close()
+    return products

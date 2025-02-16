@@ -8,12 +8,28 @@ from .services import (
     update_locations_in_inventory_service,
     update_barcode_in_inventory_service,
     update_product_for_inventory_service,
+    update_variants_for_locations_service,
     simple_update_barcode_in_inventory_service,
+    get_products_in_shopify_service,
 )
 from starlette.responses import JSONResponse
 
 
 router = APIRouter()
+
+
+# checked
+@router.get("/products")
+async def update_products():
+    is_updated = await update_products_service()
+    if not is_updated:
+        JSONResponse(
+            {"message": "Error in update products"},
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
+    return {
+        "message": "Successfully updated products",
+    }
 
 
 @router.get("/inventory")
@@ -68,19 +84,6 @@ async def update_product_for_inventory():
     }
 
 
-# @router.get("/products")
-async def update_products():
-    is_updated = await update_products_service()
-    if not is_updated:
-        JSONResponse(
-            {"message": "Error in update products"},
-            status_code=status.HTTP_400_BAD_REQUEST
-        )
-    return {
-        "message": "Successfully updated products",
-    }
-
-
 # @router.get("/barcode_in_orders")
 async def update_barcode_in_orders():
     is_updated = await update_barcode_in_orders_service()
@@ -117,4 +120,17 @@ async def delete_products_not_exists():
         )
     return {
         "message": "Successfully updated product",
+    }
+
+
+@router.get("/update_variants_for_locations")
+async def update_variants_for_locations():
+    is_updated = await update_variants_for_locations_service()
+    if not is_updated:
+        JSONResponse(
+            {"message": "Error in update variants_for_locations"},
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
+    return {
+        "message": "Successfully updated variants_for_locations",
     }

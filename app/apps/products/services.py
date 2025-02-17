@@ -81,7 +81,8 @@ async def update_product_service(product: ProductSchema):
             clean_string(variant.sku),
             variant.price or '0.00',
             variant_stock,
-            variant_barcode
+            variant_barcode,
+            variant.inventory_item_id
         ))
         # cursor.execute(select_variant, (variant_id,))
 

@@ -11,6 +11,7 @@ from .helper import (
     sql_product_update,
     sql_variant_create,
     sql_variant_update,
+    get_variant_in_shopify,
 )
 from typing import List
 from mysql.connector import Error
@@ -38,7 +39,8 @@ async def create_product_service(product: ProductSchema):
             clean_string(variant.sku),
             variant.price or '0.00',
             variant.inventory_quantity or 0,
-            clean_string(variant.barcode)
+            clean_string(variant.barcode),
+            variant.inventory_item_id
         ))
     connection = get_db_connection()
     cursor = connection.cursor(dictionary=True)
@@ -192,6 +194,34 @@ async def create_variant_service(variant: Variant) -> bool:
     return is_created
 
 
+async def create_many_variant_service(variants: List[Variant]) -> bool:
+    new_variants = []
+    for variant in variants:
+        new_var = (
+            variant.id,
+            variant.product_id,
+            clean_string(variant.title),
+            clean_string(variant.sku),
+            variant.price or '0.00',
+            variant.inventory_quantity or 0,
+            clean_string(variant.barcode)
+        )
+        new_variants.append(new_var)
+    print("new_variants", new_variants)
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    is_created = False
+    print("new_variants", new_variants[:1])
+    print("new_variants", len(new_variants))
+    try:
+        cursor.executemany(sql_variant_update, new_variants)
+        connection.commit()
+        is_created = True
+    finally:
+        cursor.close()
+    return is_created
+
+
 async def get_all_products_in_db() -> list:
     products_in_bd = []
     try:
@@ -215,7 +245,7 @@ async def get_variants_in_db() -> list:
         connection = get_db_connection()
         cursor = connection.cursor(dictionary=True)
         get_variants = """
-            SELECT variant_id as id, barcode
+            SELECT variant_id as id, barcode, inventory_item_id
             FROM product_variant
             ORDER BY variant_id ASC
         """
@@ -227,3 +257,89 @@ async def get_variants_in_db() -> list:
     finally:
         cursor.close()
     return variants
+
+
+async def delete_variant(inventory_item_id: int) -> bool:
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    is_deleted = False
+    try:
+        delete_variant_sql = f"""
+            SELECT variant_id, product_id
+            FROM product_variant
+            WHERE inventory_item_id = {inventory_item_id}
+        """
+        cursor.execute(delete_variant_sql)
+        variant_db = cursor.fetchone()
+        variant_id = None
+        product_id = None
+        if variant_db:
+            variant_id = variant_db["product_id"]
+            product_id = variant_db["product_id"]
+            delete_product_sql = f"""
+                SELECT variant_id
+                FROM product_variant
+                WHERE product_id = {product_id}
+            """
+            cursor.execute(delete_product_sql)
+            variants = cursor.fetchall()
+            if len(variants) == 1 and variants[0]["variant_id"] == variant_id:
+                print("here---------->1")
+                cursor.execute(
+                    f"""
+                        DELETE FROM product_variant
+                        WHERE product_id = {product_id}
+                    """
+                )
+                cursor.execute(
+                    f"""
+                        DELETE FROM product
+                        WHERE product_id = {product_id}
+                    """
+                )
+            else:
+                print("here---------->2")
+                cursor.execute(
+                    f"""
+                        DELETE FROM product_variant
+                        WHERE variant_id = {variant_id}
+                    """
+                )
+
+        connection.commit()
+        is_deleted = True
+    except Error as e:
+        print(f"Error en la inserción: {e}")
+        connection.rollback()
+    finally:
+        cursor.close()
+    return is_deleted
+
+
+async def create_variant(inventory_item_id: int) -> bool:
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    is_deleted = False
+    try:
+        print("inventory_item_id", inventory_item_id)
+        select_variant_sql = f"""
+            SELECT variant_id, product_id
+            FROM product_variant
+            WHERE inventory_item_id = {inventory_item_id}
+        """
+        cursor.execute(select_variant_sql)
+        variant = cursor.fetchone()
+        print("variant", variant)
+        if variant:
+            variant_id = variant["variant_id"]
+            print("variant_id-------->", variant_id)
+            variant_in_shopy = get_variant_in_shopify(variant_id)
+            if variant_in_shopy:
+                print("variant_in_shopy-------->", variant_in_shopy)
+                await create_variant_service(Variant(**variant_in_shopy))
+    except Error as e:
+        print(f"Error en la inserción: {e}")
+        connection.rollback()
+    finally:
+        cursor.close()
+    return is_deleted

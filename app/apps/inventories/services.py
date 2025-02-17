@@ -19,10 +19,8 @@ async def update_inventory_service(inventory: InventorySchema):
     result = cursor.fetchone()
     location_id = result["SucursalID"] if result else None
     # for barcode
-    print("inventory.inventory_item_id", inventory.inventory_item_id)
     cursor.execute(select_barcode_variant, (inventory.inventory_item_id,))
     result_barcode = cursor.fetchone()
-    print("result_barcode", result_barcode)
     barcode = result_barcode["barcode"] if result_barcode else 'Unknown'
 
     is_updated = False
@@ -59,20 +57,21 @@ async def update_many_inventory_service(inventories: Dict):
     print("variants_barcode", variants_barcode)
     dict_variants = {}
     for var_bar in variants_barcode:
-        if var_bar["id"] not in dict_variants:
-            dict_variants[var_bar["id"]] = var_bar["barcode"]
+        inventory_item_id = var_bar["inventory_item_id"]
+        if inventory_item_id not in dict_variants:
+            dict_variants[inventory_item_id] = 0
+        dict_variants[inventory_item_id] = var_bar["barcode"]
     print("dict_variants", len(dict_variants))
     # print("dict_variants", dict_variants)
 
     update_inventories = []
-    for variant_id, locations_stock in inventories.items():
+    for inventory_item_id, locations_stock in inventories.items():
         for location_id, stock in locations_stock.items():
             location_id = f"{location_id}"
             if location_id in dict_locations:
-                barcode = dict_variants.get(f"{variant_id}", "")
-                # print("barcode", barcode)
+                barcode = dict_variants.get(inventory_item_id, "")
                 update_inventories.append((
-                    variant_id,
+                    inventory_item_id,
                     location_id,
                     barcode,
                     stock

@@ -6,7 +6,7 @@ sql_inventory_update = """
 """
 
 select_barcode_variant = """
-    SELECT barcode FROM product_variant WHERE variant_id = %s
+    SELECT barcode FROM product_variant WHERE inventory_item_id = %s
 """
 
 select_all_locations = """
@@ -15,7 +15,7 @@ select_all_locations = """
     """
 
 select_all_variants = """
-    SELECT variant_id as id, barcode
+    SELECT variant_id as id, barcode, inventory_item_id
     FROM product_variant
     WHERE barcode <> '' OR barcode is not null OR barcode = 'Unknown';
 """
@@ -23,3 +23,15 @@ select_all_variants = """
 update_loc_var_in_inventory = """
     UPDATE inventory SET stock = %s WHERE location_id = %s AND variant_id = %s;
 """
+
+
+def inventory_dict(inventories):
+    all_iventory = {}
+    for level in inventories:
+        inventory_item_id = level['inventory_item_id']
+        location_id = level['location_id']
+        available = level.get('available', 0)
+        if inventory_item_id not in all_iventory:
+            all_iventory[inventory_item_id] = {}
+        all_iventory[inventory_item_id][location_id] = available
+    return all_iventory

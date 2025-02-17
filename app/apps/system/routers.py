@@ -72,7 +72,7 @@ async def update_variants_for_locations():
 #     }
 
 
-# @router.get("/simple_inventory_barcode")
+@router.get("/simple_inventory_barcode")
 async def simple_update_barcode_in_inventory():
     is_updated = await simple_update_barcode_in_inventory_service()
     if not is_updated:

@@ -181,7 +181,7 @@ async def simple_update_barcode_in_inventory_service() -> bool:
                 cursor.execute(update_query, (variant["barcode"], item["id"]))
                 connection.commit()
                 count_update += 1
-            time.sleep(0.5)
+            time.sleep(0.1)
 
     except Error as e:
         print(f"Error en la inserción: {e}")

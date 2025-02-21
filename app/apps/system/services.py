@@ -638,29 +638,33 @@ async def update_barcode_inventory() -> bool:
         """
         cursor.execute(select_all_inventories)
         inventories_in_bd = cursor.fetchall()
-        print("Inventories in bd:", len(inventories_in_bd))
-        variants_ids_list = [item["variant_id"] for item in inventories_in_bd]
+        if len(inventories_in_bd) > 0:
+            print("Inventories in bd:", len(inventories_in_bd))
+            variants_ids_list = [item["variant_id"] for item in inventories_in_bd] # noqa
 
-        select_variant = f"""
-            SELECT variant_id as id, barcode
-            FROM product_variant
-            WHERE variant_id
-            IN ({', '.join(map(str, variants_ids_list))});
-        """
-        cursor.execute(select_variant)
-        variants_in_db = cursor.fetchall()
-        variants_ids_in_db_dict = {
-            item["id"]: item["barcode"] for item in variants_in_db
-        }
-        _update_barcode_inventory = []
-        for item in inventories_in_bd:
-            if item["variant_id"] in variants_ids_in_db_dict:
-                _update_barcode_inventory.append(
-                    (variants_ids_in_db_dict[item["variant_id"]], item["id"])
-                )
-        update_order_item = "UPDATE inventory SET barcode = %s WHERE id = %s"
-        cursor.executemany(update_order_item, _update_barcode_inventory)
-        connection.commit()
+            select_variant = f"""
+                SELECT variant_id as id, barcode
+                FROM product_variant
+                WHERE variant_id
+                IN ({', '.join(map(str, variants_ids_list))});
+            """
+            print("select_variant", select_variant)
+            cursor.execute(select_variant)
+            variants_in_db = cursor.fetchall()
+            variants_ids_in_db_dict = {
+                item["id"]: item["barcode"] for item in variants_in_db
+            }
+            _update_barcode_inventory = []
+            for item in inventories_in_bd:
+                if item["variant_id"] in variants_ids_in_db_dict:
+                    _update_barcode_inventory.append(
+                        (variants_ids_in_db_dict[item["variant_id"]], item["id"]) # noqa
+                    )
+            update_orders_sql = "UPDATE inventory SET barcode = %s WHERE id = %s"  # noqa
+            cursor.executemany(update_orders_sql, _update_barcode_inventory)
+            connection.commit()
+
+        is_updated = True
 
     except Error as e:
         print(f"Error en la inserción: {e}")
@@ -693,28 +697,31 @@ async def update_barcode_order_item() -> bool:
         cursor.execute(select_all_order_items)
         order_items_in_bd = cursor.fetchall()
         print("Order items in bd:", len(order_items_in_bd))
-        variants_ids_list = [item["variant_id"] for item in order_items_in_bd]
+        if len(order_items_in_bd) > 0:
+            variants_ids_list = [item["variant_id"] for item in order_items_in_bd]  # noqa
 
-        select_variant = f"""
-            SELECT variant_id as id, barcode
-            FROM product_variant
-            WHERE variant_id
-            IN ({', '.join(map(str, variants_ids_list))});
-        """
-        cursor.execute(select_variant)
-        variants_in_db = cursor.fetchall()
-        variants_ids_in_db_dict = {
-            item["id"]: item["barcode"] for item in variants_in_db
-        }
-        _update_barcode_inventory = []
-        for item in order_items_in_bd:
-            if item["variant_id"] in variants_ids_in_db_dict:
-                _update_barcode_inventory.append(
-                    (variants_ids_in_db_dict[item["variant_id"]], item["id"])
-                )
-        update_order_item = "UPDATE order_item SET barcode = %s WHERE id = %s"
-        cursor.executemany(update_order_item, _update_barcode_inventory)
-        connection.commit()
+            select_variant = f"""
+                SELECT variant_id as id, barcode
+                FROM product_variant
+                WHERE variant_id
+                IN ({', '.join(map(str, variants_ids_list))});
+            """
+            cursor.execute(select_variant)
+            variants_in_db = cursor.fetchall()
+            variants_ids_in_db_dict = {
+                item["id"]: item["barcode"] for item in variants_in_db
+            }
+            _update_barcode_inventory = []
+            for item in order_items_in_bd:
+                if item["variant_id"] in variants_ids_in_db_dict:
+                    _update_barcode_inventory.append(
+                        (variants_ids_in_db_dict[item["variant_id"]], item["id"])  # noqa
+                    )
+            update_order_item = "UPDATE order_item SET barcode = %s WHERE id = %s"  # noqa
+            cursor.executemany(update_order_item, _update_barcode_inventory)
+            connection.commit()
+
+        is_updated = True
 
     except Error as e:
         print(f"Error en la inserción: {e}")

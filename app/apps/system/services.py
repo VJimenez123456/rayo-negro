@@ -619,3 +619,111 @@ async def update_only_variants_service() -> bool:
     print("Finish update only_variants")
     print(f"Execution time: {duration:.4f} seconds")
     return is_updated
+
+
+async def update_barcode_inventory() -> bool:
+    print("Init update barcode_inventory")
+    init_time = time.time()
+    is_updated = False
+    # connection
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    try:
+        select_all_inventories = """
+            SELECT id, barcode, variant_id
+            FROM inventory
+            WHERE barcode = 'Unknown' OR barcode = ''
+            AND variant_id is not null
+            ORDER BY id ASC;
+        """
+        cursor.execute(select_all_inventories)
+        inventories_in_bd = cursor.fetchall()
+        print("Inventories in bd:", len(inventories_in_bd))
+        variants_ids_list = [item["variant_id"] for item in inventories_in_bd]
+
+        select_variant = f"""
+            SELECT variant_id as id, barcode
+            FROM product_variant
+            WHERE variant_id
+            IN ({', '.join(map(str, variants_ids_list))});
+        """
+        cursor.execute(select_variant)
+        variants_in_db = cursor.fetchall()
+        variants_ids_in_db_dict = {
+            item["id"]: item["barcode"] for item in variants_in_db
+        }
+        _update_barcode_inventory = []
+        for item in inventories_in_bd:
+            if item["variant_id"] in variants_ids_in_db_dict:
+                _update_barcode_inventory.append(
+                    (variants_ids_in_db_dict[item["variant_id"]], item["id"])
+                )
+        update_order_item = "UPDATE inventory SET barcode = %s WHERE id = %s"
+        cursor.executemany(update_order_item, _update_barcode_inventory)
+        connection.commit()
+
+    except Error as e:
+        print(f"Error en la inserción: {e}")
+        connection.rollback()
+    finally:
+        cursor.close()
+
+    end_time = time.time()
+    duration = end_time - init_time
+    print("Finish update barcode_inventory")
+    print(f"Execution time: {duration:.4f} seconds")
+    return is_updated
+
+
+async def update_barcode_order_item() -> bool:
+    print("Init update order_items")
+    init_time = time.time()
+    is_updated = False
+    # connection
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    try:
+        select_all_order_items = """
+            SELECT id, barcode, variant_id
+            FROM order_item
+            WHERE barcode = 'Unknown' OR barcode = ''
+            AND variant_id is not null
+            ORDER BY id ASC;
+        """
+        cursor.execute(select_all_order_items)
+        order_items_in_bd = cursor.fetchall()
+        print("Order items in bd:", len(order_items_in_bd))
+        variants_ids_list = [item["variant_id"] for item in order_items_in_bd]
+
+        select_variant = f"""
+            SELECT variant_id as id, barcode
+            FROM product_variant
+            WHERE variant_id
+            IN ({', '.join(map(str, variants_ids_list))});
+        """
+        cursor.execute(select_variant)
+        variants_in_db = cursor.fetchall()
+        variants_ids_in_db_dict = {
+            item["id"]: item["barcode"] for item in variants_in_db
+        }
+        _update_barcode_inventory = []
+        for item in order_items_in_bd:
+            if item["variant_id"] in variants_ids_in_db_dict:
+                _update_barcode_inventory.append(
+                    (variants_ids_in_db_dict[item["variant_id"]], item["id"])
+                )
+        update_order_item = "UPDATE order_item SET barcode = %s WHERE id = %s"
+        cursor.executemany(update_order_item, _update_barcode_inventory)
+        connection.commit()
+
+    except Error as e:
+        print(f"Error en la inserción: {e}")
+        connection.rollback()
+    finally:
+        cursor.close()
+
+    end_time = time.time()
+    duration = end_time - init_time
+    print("Finish update order_items")
+    print(f"Execution time: {duration:.4f} seconds")
+    return is_updated

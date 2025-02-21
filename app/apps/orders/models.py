@@ -43,11 +43,11 @@ class Address(BaseModel):
 
 class Customer(BaseModel):
     id: int
-    email: Optional[str]
+    email: Optional[str] = None
     created_at: datetime
     updated_at: datetime
-    first_name: str
-    last_name: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     state: str
     note: Optional[str] = None
     verified_email: bool
@@ -57,7 +57,7 @@ class Customer(BaseModel):
     currency: str
     tax_exemptions: List[str]
     admin_graphql_api_id: str
-    default_address: Address
+    default_address: Optional[Address] = None
 
 
 class LineItem(BaseModel):

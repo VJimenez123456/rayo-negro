@@ -43,7 +43,7 @@ def parser_order(order: OrderSchema) -> tuple:
     customer_name = 'Unknown'
     if order.shipping_address:
         customer_name = order.shipping_address.name
-    elif order.customer:
+    elif order.customer and order.customer.default_addres:
         customer_name = order.customer.default_address.name
 
     mexico_tz = ZoneInfo("America/Mexico_City")

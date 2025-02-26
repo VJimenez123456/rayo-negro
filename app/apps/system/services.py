@@ -734,3 +734,72 @@ async def update_barcode_order_item() -> bool:
     print("Finish update order_items")
     print(f"Execution time: {duration:.4f} seconds")
     return is_updated
+
+
+async def update_elements_in_inventory_with_barcodes_service() -> bool:
+    print("Init update update_elements_in_inventory_with")
+    init_time = time.time()
+    is_updated = False
+    # connection
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    try:
+        select_all_inventories = """
+            SELECT id, barcode, variant_id
+            FROM inventory
+            WHERE variant_id is not null
+            ORDER BY id ASC;
+        """
+        cursor.execute(select_all_inventories)
+        inventories_in_db = cursor.fetchall()
+        dict_variants_inventory = {}
+        list_variants_inventory = []
+        for item in inventories_in_db:
+            variant_id = item["variant_id"]
+            if variant_id not in dict_variants_inventory:
+                dict_variants_inventory[variant_id] = 0
+            dict_variants_inventory[variant_id] = item["id"]
+            if variant_id not in list_variants_inventory:
+                list_variants_inventory.append(variant_id)
+
+        select_variant_in_db = f"""
+            SELECT variant_id as id
+            FROM product_variant
+            WHERE variant_id
+            IN ({', '.join(map(str, list_variants_inventory))});
+        """
+        cursor.execute(select_variant_in_db)
+        variant_in_db = cursor.fetchall()
+        variant_in_db_list = [var["id"] for var in variant_in_db]
+
+        delete_inventory = list(
+            set(list_variants_inventory) - set(variant_in_db_list)
+        )
+
+        ids_inventories_delete = []
+        for variant_id in delete_inventory:
+            if variant_id in dict_variants_inventory:
+                ids_inventories_delete.append(
+                    dict_variants_inventory[variant_id])
+
+        print("delete_inventory_ids:::", len(ids_inventories_delete))
+
+        delete_inventory_in_db = f"""
+            DELETE FROM inventory
+            WHERE id IN ({', '.join(map(str, ids_inventories_delete))});
+        """
+        cursor.execute(delete_inventory_in_db)
+        connection.commit()
+        is_updated = True
+
+    except Error as e:
+        print(f"Error en la inserción: {e}")
+        connection.rollback()
+    finally:
+        cursor.close()
+
+    end_time = time.time()
+    duration = end_time - init_time
+    print("Finish update update_elements_in_inventory_with")
+    print(f"Execution time: {duration:.4f} seconds")
+    return is_updated

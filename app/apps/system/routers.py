@@ -14,6 +14,7 @@ from .services import (
     # get_products_in_shopify_service,
     update_barcode_inventory,
     update_barcode_order_item,
+    update_elements_in_inventory_with_barcodes_service,
 )
 from starlette.responses import JSONResponse
 
@@ -39,6 +40,12 @@ async def update_products():
 async def update_all_barcodes():
     await update_barcode_inventory()
     await update_barcode_order_item()
+    return {"message": "Successfully updated all"}
+
+
+@router.get("/update_elements_in_inventory_with_barcodes")
+async def update_elements_in_inventory_with_barcodes():
+    await update_elements_in_inventory_with_barcodes_service()
     return {"message": "Successfully updated all"}
 
 

@@ -21,12 +21,15 @@ async def update_inventory_service(inventory: InventorySchema):
     # for barcode
     cursor.execute(select_barcode_variant, (inventory.inventory_item_id,))
     result_barcode = cursor.fetchone()
-    barcode = result_barcode["barcode"] if result_barcode else 'Unknown'
+    variant_id, barcode = None, None
+    if result_barcode:
+        variant_id = result_barcode["id"]
+        barcode = result_barcode["barcode"]
 
     is_updated = False
     if location_id:
         inventory_obj = (
-            inventory.inventory_item_id,
+            variant_id,
             location_id,
             barcode,
             inventory.available

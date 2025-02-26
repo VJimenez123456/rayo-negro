@@ -6,7 +6,7 @@ sql_inventory_update = """
 """
 
 select_barcode_variant = """
-    SELECT barcode FROM product_variant WHERE inventory_item_id = %s
+    SELECT variant_id AS id, barcode FROM product_variant WHERE inventory_item_id = %s
 """
 
 select_all_locations = """

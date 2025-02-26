@@ -126,9 +126,9 @@ async def update_variants_for_locations_service() -> bool:
 
     # create, update or delete
     set_shopy = set(inventory_ids_in_shopify)
-    print("len_set_shopy", len(set_shopy))
+    # print("len_set_shopy", len(set_shopy))
     set_db = set(variants_ids_in_db)
-    print("len_set_db", len(set_db))
+    # print("len_set_db", len(set_db))
 
     # for delete variants
     delete = list(set_db - set_shopy)
@@ -139,8 +139,8 @@ async def update_variants_for_locations_service() -> bool:
 
     # # for create variants
     create = list(set_shopy - set_db)
-    print("create", create[:3])
-    print("create", len(create))
+    # print("create", create[:3])
+    # print("create", len(create))
     # create new variants:::
     # for inventory_item_id in create:
     #     # print("create", all_iventory[inventory_item_id])
@@ -158,9 +158,6 @@ async def update_variants_for_locations_service() -> bool:
         inventory_loc_list = []
         for loction_id, stock in inventory_loc.items():
             _loction_id = locations_in_db_dict.get(f"{loction_id}")
-            print("_loction_id", _loction_id)
-            print("stock", stock)
-            print("item in variants_db_dic", item in variants_db_dict)
             if _loction_id and stock and item in variants_db_dict:
                 inventory_loc_list.append(
                     InventoryObject(**{

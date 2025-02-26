@@ -285,7 +285,6 @@ async def delete_variant(inventory_item_id: int) -> bool:
             cursor.execute(delete_product_sql)
             variants = cursor.fetchall()
             if len(variants) == 1 and variants[0]["variant_id"] == variant_id:
-                print("here---------->1")
                 cursor.execute(
                     f"""
                         DELETE FROM product_variant
@@ -299,7 +298,6 @@ async def delete_variant(inventory_item_id: int) -> bool:
                     """
                 )
             else:
-                print("here---------->2")
                 cursor.execute(
                     f"""
                         DELETE FROM product_variant

@@ -1,4 +1,4 @@
-from .models import InventorySchema
+from .models import InventorySchema, InventoryObject
 from app.database import get_db_connection
 from .helper import (
     select_all_locations,
@@ -8,7 +8,7 @@ from .helper import (
     # update_loc_var_in_inventory,
 )
 from app.apps.locations.helper import select_location_id
-from typing import Dict
+from typing import Dict, List
 
 
 async def update_inventory_service(inventory: InventorySchema):
@@ -85,6 +85,27 @@ async def update_many_inventory_service(inventories: Dict):
         print("update_inventories", update_inventories[:10])
         # cursor.executemany(sql_inventory_update, update_inventories)
         # connection.commit()  # TODO: descomentar
+        is_updated = True
+    finally:
+        cursor.close()
+    return is_updated
+
+
+async def update_many_inventory_simple_service(
+        inventories: List[InventoryObject]):
+    update_inventories_list = []
+    for inv in inventories:
+        update_inventories_list.append((
+            inv.variant_id,
+            inv.location_id,
+            inv.barcode,
+            inv.stock
+        ))
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    try:
+        cursor.executemany(sql_inventory_update, update_inventories_list)
+        connection.commit()  # TODO: descomentar
         is_updated = True
     finally:
         cursor.close()

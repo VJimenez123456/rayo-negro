@@ -27,10 +27,13 @@ from app.apps.products.services import (
     delete_product_service,
     get_all_products_in_db,
     get_variants_in_db,
-    # create_variant,
-    delete_variant,
+    create_variant,
+    # delete_variant,
 )
-from app.apps.inventories.services import update_many_inventory_service
+from app.apps.inventories.services import (
+    update_many_inventory_service,
+    update_many_inventory_simple_service
+)
 from app.apps.locations.services import get_all_locations_in_db
 from app.apps.products.models import (
     DeleteProductSchema, ProductSchema, Variant
@@ -39,6 +42,7 @@ from app.apps.products.helper import (
     get_products_in_shopify, get_variants_in_shopify
 )
 from app.apps.inventories.helper import inventory_dict
+from app.apps.inventories.models import InventoryObject
 
 
 async def update_products_service() -> bool:
@@ -111,11 +115,12 @@ async def update_variants_for_locations_service() -> bool:
     variants_db_dict = {}
     variants_ids_in_db = []
     for var in variants_db:
-        id = var['id']
         inventory_item_id = var["inventory_item_id"]
-        if id not in variants_db_dict:
+        if inventory_item_id not in variants_db_dict:
             variants_db_dict[inventory_item_id] = {}
-        variants_db_dict[inventory_item_id][id] = var["barcode"]
+        variants_db_dict[inventory_item_id] = {
+            "id": var["id"], "barcode": var["barcode"]
+        }
         variants_ids_in_db.append(inventory_item_id)
     print("Total variants in db:", len(variants_ids_in_db))
 
@@ -128,16 +133,48 @@ async def update_variants_for_locations_service() -> bool:
     # for delete variants
     delete = list(set_db - set_shopy)
     print("delete", len(delete))
-    for inventory_item_id in delete:
-        await delete_variant(inventory_item_id)
-        # print("delete", variants_db_dict[inventory_item_id])
+    # for inventory_item_id in delete:
+    #     await delete_variant(inventory_item_id)
+    #     print("delete", variants_db_dict[inventory_item_id])
 
     # # for create variants
-    # create = list(set_shopy - set_db)
-    # print("create", len(create))
+    create = list(set_shopy - set_db)
+    print("create", create[:3])
+    print("create", len(create))
+    # create new variants:::
     # for inventory_item_id in create:
     #     # print("create", all_iventory[inventory_item_id])
     #     await create_variant(inventory_item_id)
+
+    locations_in_db = await get_all_locations_in_db()
+    locations_in_db_dict = {
+        loc["location_shopify"]: loc["SucursalID"] for loc in locations_in_db
+    }
+
+    inventories_list = []
+    list_set_shopy = list(set_shopy)
+    for item in list_set_shopy:
+        inventory_loc = all_iventory[item]
+        inventory_loc_list = []
+        for loction_id, stock in inventory_loc.items():
+            _loction_id = locations_in_db_dict.get(f"{loction_id}")
+            print("_loction_id", _loction_id)
+            print("stock", stock)
+            print("item in variants_db_dic", item in variants_db_dict)
+            if _loction_id and stock and item in variants_db_dict:
+                inventory_loc_list.append(
+                    InventoryObject(**{
+                        "variant_id": variants_db_dict[item]["id"],
+                        "location_id": _loction_id,
+                        "barcode": variants_db_dict[item]["barcode"],
+                        "stock": stock
+                    })
+                )
+        inventories_list.extend(inventory_loc_list)
+    print("inventories_list", inventories_list[:3])
+    print("inventories_list", len(inventories_list))
+    if len(inventories_list):
+        await update_many_inventory_simple_service(inventories_list)
 
     # end
     end_time = time.time()
@@ -421,39 +458,17 @@ async def update_inventory_service() -> bool:
         # connection
         connection = get_db_connection()
         cursor = connection.cursor(dictionary=True)
-        # select_all_prod = "SELECT * FROM product;"
-        # cursor.execute(select_all_prod)
-        # result = cursor.fetchall()
-        # print(f"Total elements in db {len(result)}")
-        # Get all locations
-        locations = fetch_locations()
-        location_ids = get_location_ids(locations)
+        inventory_levels_shopify = fetch_inventory_levels()
+        print("len", len(inventory_levels_shopify))
 
-        # Obtener productos activos
-        print("Obteniendo detalles de productos de Shopify...")
-        products = get_products_in_shopify()
-        print("Products in shopify:::", len(products))
-
-        if products and len(products) > 0:
-            # Obtener los inventory_item_ids para los niveles de inventario
-            inventory_item_ids = [
-                variant.get('inventory_item_id')
-                for product in products
-                for variant in product.get('variants', [])
-                if variant.get('inventory_item_id')
-            ]
-            # Delete duplicate
-            inventory_item_ids = list(set(inventory_item_ids))
-            print("inventory_item_ids", len(inventory_item_ids))
-
-            # Get inventory levels
-            inventory_levels = fetch_inventory_levels(
-                inventory_item_ids=inventory_item_ids,
-                location_ids=location_ids
-            )
-            print("inventory_levels", len(inventory_levels))
-            is_updated = await update_many_inventory_service(
-                inventory_levels)
+        # # Get inventory levels
+        # inventory_levels = fetch_inventory_levels(
+        #     inventory_item_ids=inventory_item_ids,
+        #     location_ids=location_ids
+        # )
+        # print("inventory_levels", len(inventory_levels))
+        # is_updated = await update_many_inventory_service(
+        #     inventory_levels)
 
     except Error as e:
         print(f"Error en la inserción: {e}")

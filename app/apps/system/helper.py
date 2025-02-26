@@ -310,7 +310,7 @@ def fetch_all_inventory_levels():
     try:
         rate_limiter.wait()
         response = session.get(url, headers=headers)
-        print("response.json()", response.json())
+        # print("response.json()", response.json())
         log_api_call(response)
         if response.status_code == 200:
             data = response.json()

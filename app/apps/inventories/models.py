@@ -8,3 +8,10 @@ class InventorySchema(BaseModel):
     available: int
     updated_at: datetime
     admin_graphql_api_id: str
+
+
+class InventoryObject(BaseModel):
+    variant_id: int | str
+    location_id: int | str
+    barcode: int | str
+    stock: int | str

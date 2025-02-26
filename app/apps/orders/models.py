@@ -4,18 +4,18 @@ from typing import List, Optional, Any
 
 
 class ShippingAddress(BaseModel):
-    first_name: str
-    last_name: str
-    name: str
-    address1: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    name: Optional[str] = None
+    address1: Optional[str] = None
     address2: Optional[str] = None
-    phone: str
-    city: str
-    zip: str
-    province: str
-    country: str
-    country_code: str
-    province_code: str
+    phone: Optional[str] = None
+    city: Optional[str] = None
+    zip: Optional[str] = None
+    province: Optional[str] = None
+    country: Optional[str] = None
+    country_code: Optional[str] = None
+    province_code: Optional[str] = None
     company: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None

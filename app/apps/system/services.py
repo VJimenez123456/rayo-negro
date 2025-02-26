@@ -784,12 +784,14 @@ async def update_elements_in_inventory_with_barcodes_service() -> bool:
 
         print("delete_inventory_ids:::", len(ids_inventories_delete))
 
-        delete_inventory_in_db = f"""
-            DELETE FROM inventory
-            WHERE id IN ({', '.join(map(str, ids_inventories_delete))});
-        """
-        cursor.execute(delete_inventory_in_db)
-        connection.commit()
+        if len(ids_inventories_delete) > 0:
+            delete_inventory_in_db = f"""
+                DELETE FROM inventory
+                WHERE id IN ({', '.join(map(str, ids_inventories_delete))});
+            """
+            cursor.execute(delete_inventory_in_db)
+            connection.commit()
+
         is_updated = True
 
     except Error as e:

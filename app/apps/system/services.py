@@ -27,12 +27,14 @@ from app.apps.products.services import (
     delete_product_service,
     get_all_products_in_db,
     get_variants_in_db,
-    create_variant,
+    # create_variant,
+    delete_many_variants_for_id,
     # delete_variant,
 )
 from app.apps.inventories.services import (
-    update_many_inventory_service,
-    update_many_inventory_simple_service
+    # update_many_inventory_service,
+    update_many_inventory_simple_service,
+    delete_inventories_without_variants,
 )
 from app.apps.locations.services import get_all_locations_in_db
 from app.apps.products.models import (
@@ -631,6 +633,36 @@ async def update_only_variants_service() -> bool:
     print("Finish update only_variants")
     print(f"Execution time: {duration:.4f} seconds")
     return is_updated
+
+
+async def delete_duplicate_variants_service() -> bool:
+    print("Init update only_variants")
+    init_time = time.time()
+    is_deleted = False
+    variants_shopify = get_variants_in_shopify()
+    variants_shopify_list = [item["id"] for item in variants_shopify]
+    variants_db = await get_variants_in_db()
+    variants_db_list = [item["id"] for item in variants_db]
+
+    variants_shopify_set = set(variants_shopify_list)
+    variants_db_set = set(variants_db_list)
+
+    delete_variants = list(variants_db_set - variants_shopify_set)
+    print("delete_variants:", len(delete_variants))
+
+    if len(delete_variants):
+        delete_var = await delete_many_variants_for_id(delete_variants)
+        print("delete_var:", delete_var)
+        delete_inv = await delete_inventories_without_variants(delete_variants)
+        print("delete_inv:", delete_inv)
+        is_deleted = True if delete_var and delete_inv else False
+        print("is_deleted:", is_deleted)
+
+    end_time = time.time()
+    duration = end_time - init_time
+    print("Finish update only_variants")
+    print(f"Execution time: {duration:.4f} seconds")
+    return is_deleted
 
 
 async def update_barcode_inventory() -> bool:

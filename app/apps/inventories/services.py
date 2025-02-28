@@ -110,3 +110,19 @@ async def update_many_inventory_simple_service(
     finally:
         cursor.close()
     return is_updated
+
+
+async def delete_inventories_without_variants(variants: List[int]) -> bool:
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    try:
+        delete_sql = f"""
+            DELETE FROM inventory
+            WHERE variant_id IN ({', '.join(map(str, variants))});
+        """
+        cursor.execute(delete_sql)
+        connection.commit()
+        is_updated = True
+    finally:
+        cursor.close()
+    return is_updated

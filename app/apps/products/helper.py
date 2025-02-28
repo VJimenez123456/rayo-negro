@@ -105,7 +105,7 @@ def get_variants_in_shopify() -> list:
     variants = []
     base_url, headers = get_credentials_shopify()
     url = f"{base_url}/variants.json?limit=250"
-    rate_limiter = RateLimiter(max_calls=4, period=1)
+    rate_limiter = RateLimiter(max_calls=4, period=2)
     session = requests.Session()
     variants = []
 

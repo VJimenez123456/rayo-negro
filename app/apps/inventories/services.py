@@ -126,3 +126,24 @@ async def delete_inventories_without_variants(variants: List[int]) -> bool:
     finally:
         cursor.close()
     return is_updated
+
+
+async def get_variants_with_same_barcode() -> list:
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    data_list = []
+    try:
+        select_sql = """
+            SELECT
+                barcode,
+                GROUP_CONCAT(DISTINCT variant_id
+                ORDER BY variant_id) AS variants
+            FROM inventory
+            WHERE barcode IS NOT NULL
+            GROUP BY barcode HAVING COUNT(DISTINCT variant_id) > 1;
+        """
+        cursor.execute(select_sql)
+        data_list = cursor.fetchall()
+    finally:
+        cursor.close()
+    return data_list

@@ -30,18 +30,22 @@ from app.apps.products.services import (
     # create_variant,
     delete_many_variants_for_id,
     # delete_variant,
+    get_variants_with_ids,
 )
 from app.apps.inventories.services import (
     # update_many_inventory_service,
     update_many_inventory_simple_service,
     delete_inventories_without_variants,
+    get_variants_with_same_barcode,
 )
 from app.apps.locations.services import get_all_locations_in_db
 from app.apps.products.models import (
     DeleteProductSchema, ProductSchema, Variant
 )
 from app.apps.products.helper import (
-    get_products_in_shopify, get_variants_in_shopify
+    get_products_in_shopify,
+    get_variants_in_shopify,
+    get_variant_in_shopify,
 )
 from app.apps.inventories.helper import inventory_dict
 from app.apps.inventories.models import InventoryObject
@@ -648,15 +652,47 @@ async def delete_duplicate_variants_service() -> bool:
     variants_db_set = set(variants_db_list)
 
     delete_variants = list(variants_db_set - variants_shopify_set)
-    print("delete_variants:", len(delete_variants))
+    print("delete_variants 1:", len(delete_variants))
 
     if len(delete_variants):
         delete_var = await delete_many_variants_for_id(delete_variants)
-        print("delete_var:", delete_var)
         delete_inv = await delete_inventories_without_variants(delete_variants)
-        print("delete_inv:", delete_inv)
         is_deleted = True if delete_var and delete_inv else False
-        print("is_deleted:", is_deleted)
+        print("Verify with shopify variants. is_deleted?:", is_deleted)
+
+    # variants not exist in product variants
+    var_inventory = await get_variants_with_same_barcode()
+    variants_inventory_list = []
+    for item in var_inventory:
+        variants_inventory_list.extend(item["variants"].split(","))
+    variants_ids_in_db = await get_variants_with_ids(variants_inventory_list)
+    var_ids_in_db = [str(item["id"]) for item in variants_ids_in_db]
+    var_ids_in_db_set = set(var_ids_in_db)
+    variants_inventory_set = set(variants_inventory_list)
+    delete_duplicate_var = list(variants_inventory_set - var_ids_in_db_set)
+
+    print("delete_variants 2:", len(delete_duplicate_var))
+    if len(delete_duplicate_var) > 0:
+        delete_inv = await delete_inventories_without_variants(
+            delete_duplicate_var)
+        is_deleted = is_deleted and delete_inv
+        print("Verify exists variants. is_deleted?:", is_deleted)
+
+    # see variants for delete
+    see_variants = list(variants_inventory_set - set(delete_duplicate_var))
+    delete_variant_verify = []
+    for elem in see_variants:
+        time.sleep(1)
+        var = get_variant_in_shopify(elem)
+        if not var:
+            delete_variant_verify.append(elem)
+
+    print("delete_variants 3:", len(delete_variant_verify))
+    if len(delete_variant_verify) > 0:
+        delete_inv_veri = await delete_inventories_without_variants(
+            delete_variant_verify)
+        is_deleted = is_deleted and delete_inv_veri
+        print("Verify duplicates in inventory. is_deleted?:", is_deleted)
 
     end_time = time.time()
     duration = end_time - init_time

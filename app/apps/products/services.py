@@ -362,3 +362,22 @@ async def delete_many_variants_for_id(variants: List[int]) -> bool:
     finally:
         cursor.close()
     return is_deleted
+
+
+async def get_variants_with_ids(variant_ids: List) -> list:
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    data = []
+    try:
+        select_sql = f"""
+            SELECT variant_id AS id FROM product_variant
+            WHERE variant_id IN ({', '.join(map(str, variant_ids))});
+        """
+        cursor.execute(select_sql)
+        data = cursor.fetchall()
+    except Error as e:
+        print(f"Error en la inserción: {e}")
+        connection.rollback()
+    finally:
+        cursor.close()
+    return data

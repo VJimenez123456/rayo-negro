@@ -91,7 +91,7 @@ async def update_product_service(product: ProductSchema):
         if inventory_item_id not in var_inventory_items_dict:
             var_inventory_items_dict[inventory_item_id] = {
                 "id": variant_id, "barcode": variant_barcode}
-        await update_inventory_for_id_items(var_inventory_items_dict)
+    await update_inventory_for_id_items(var_inventory_items_dict)
 
     is_updated = False
     try:

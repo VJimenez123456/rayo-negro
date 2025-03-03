@@ -154,21 +154,15 @@ async def get_variants_with_same_barcode() -> list:
 
 async def update_inventory_for_id_items(var_inv_dict: Dict) -> list:
 
-    print("var_inv_dict", var_inv_dict)
-
     inventory_items_id_list = [item for item in var_inv_dict.keys()]
-    print("inventory_items_id_list", inventory_items_id_list)
-
     connection = get_db_connection()
     cursor = connection.cursor(dictionary=True)
 
     try:
         inventories = fetch_shopify_variants_for_items(inventory_items_id_list)
-        print("inventories", inventories)
         print("Total inventories all locations:", len(inventories))
         all_iventory = inventory_dict(inventories)
         locations_in_db_dict = await get_all_locations_in_db_dict()
-        print("locations_in_db_dict", locations_in_db_dict)
         inventories_list = []
         for item_id, level in all_iventory.items():
             inventory_loc_list = []
@@ -184,13 +178,9 @@ async def update_inventory_for_id_items(var_inv_dict: Dict) -> list:
                         })
                     )
             inventories_list.extend(inventory_loc_list)
-
-        print("inventories_list", inventories_list)
-        print("inventories_list", len(inventories_list))
-        print("Actualizado0")
         if len(inventories_list) > 0:
-            print("Actualizado1")
-            # await update_many_inventory_simple_service(inventories_list)
+            print("Actualizado!!!")
+            await update_many_inventory_simple_service(inventories_list)
     finally:
         cursor.close()
     return inventories_list

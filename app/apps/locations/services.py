@@ -75,3 +75,8 @@ async def get_all_locations_in_db() -> list:
     finally:
         cursor.close()
     return locations_in_db
+
+
+async def get_all_locations_in_db_dict() -> dict:
+    locations = await get_all_locations_in_db()
+    return {loc["location_shopify"]: loc["SucursalID"] for loc in locations}

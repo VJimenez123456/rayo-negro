@@ -35,3 +35,4 @@ def inventory_dict(inventories):
             all_iventory[inventory_item_id] = {}
         all_iventory[inventory_item_id][location_id] = available
     return all_iventory
+

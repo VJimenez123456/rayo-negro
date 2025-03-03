@@ -31,6 +31,7 @@ from app.apps.products.services import (
     delete_many_variants_for_id,
     # delete_variant,
     get_variants_with_ids,
+    get_one_product_for_id,
 )
 from app.apps.inventories.services import (
     # update_many_inventory_service,
@@ -885,3 +886,11 @@ async def update_elements_in_inventory_with_barcodes_service() -> bool:
     print("Finish update update_elements_in_inventory_with")
     print(f"Execution time: {duration:.4f} seconds")
     return is_updated
+
+
+async def update_product_and_inventory(product_id: int) -> bool:
+    try:
+        product = await get_one_product_for_id(product_id)
+        print("product------>>>>>>>>>>><", product)
+    except Exception as e:
+        print(f"Error: {e}")

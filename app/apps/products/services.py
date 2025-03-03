@@ -13,6 +13,7 @@ from .helper import (
     sql_variant_update,
     get_variant_in_shopify,
 )
+from app.apps.inventories.services import update_inventory_for_id_items
 from typing import List
 from mysql.connector import Error
 
@@ -70,10 +71,12 @@ async def update_product_service(product: ProductSchema):
         product.image.src if product.image else "Unknown"
     )
     variant_values = []
+    var_inventory_items_dict = {}
     for variant in variants:
         variant_id = variant.id
         variant_stock = variant.inventory_quantity or 0
         variant_barcode = clean_string(variant.barcode)
+        inventory_item_id = variant.inventory_item_id
         variant_values.append((
             variant_id,
             product_id,
@@ -82,9 +85,13 @@ async def update_product_service(product: ProductSchema):
             variant.price or '0.00',
             variant_stock,
             variant_barcode,
-            variant.inventory_item_id
+            inventory_item_id
         ))
-        # cursor.execute(select_variant, (variant_id,))
+        # update inventory
+        if inventory_item_id not in var_inventory_items_dict:
+            var_inventory_items_dict[inventory_item_id] = {
+                "id": variant_id, "barcode": variant_barcode}
+        await update_inventory_for_id_items(var_inventory_items_dict)
 
     is_updated = False
     try:
@@ -381,3 +388,23 @@ async def get_variants_with_ids(variant_ids: List) -> list:
     finally:
         cursor.close()
     return data
+
+
+async def get_one_product_for_id(product_id: int):
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    product = None
+    try:
+        product_sql = f"""
+            SELECT product_id AS id, title, vendor, price, sku, image_url
+            FROM product
+            WHERE product_id = {product_id};
+        """
+        cursor.execute(product_sql)
+        product = cursor.fetchone()
+    except Error as e:
+        print(f"Error en la inserción: {e}")
+        connection.rollback()
+    finally:
+        cursor.close()
+    return product

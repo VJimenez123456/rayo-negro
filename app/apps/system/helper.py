@@ -386,6 +386,7 @@ def fetch_shopify_variants_for_items(items_id: list) -> list:
             if link_header:
                 print("next url")
                 url = get_link_next(link_header)
+                print("url--->", url)
             else:
                 print("next url None")
                 url = None

@@ -26,8 +26,8 @@ update_loc_var_in_inventory = """
 
 
 def inventory_dict(inventories):
-    print("inventories-0", inventories)
-    print("inventories-0", len(inventories))
+    # print("inventories-0", inventories)
+    # print("inventories-0", len(inventories))
     all_iventory = {}
     for level in inventories:
         inventory_item_id = level['inventory_item_id']
@@ -36,7 +36,7 @@ def inventory_dict(inventories):
         if inventory_item_id not in all_iventory:
             all_iventory[inventory_item_id] = {}
         all_iventory[inventory_item_id][location_id] = available
-    print("all_iventory-1", all_iventory)
-    print("all_iventory-1", len(all_iventory))
+    # print("all_iventory-1", all_iventory)
+    # print("all_iventory-1", len(all_iventory))
     return all_iventory
 

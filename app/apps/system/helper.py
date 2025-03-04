@@ -372,7 +372,6 @@ def fetch_shopify_variants_for_items(items_id: list) -> list:
         'inventory_item_ids': ','.join(map(str, items_id)),
         'limit': 250
     }
-    print("params--->", params)
     inventory = []
     try:
         while url:
@@ -385,8 +384,10 @@ def fetch_shopify_variants_for_items(items_id: list) -> list:
                 inventory.extend(fetched_inventory)
             link_header = response.headers.get('Link')
             if link_header:
+                print("next url")
                 url = get_link_next(link_header)
             else:
+                print("next url None")
                 url = None
     except requests.RequestException as e:
         print(f"Error en la solicitud HTTP para inventario.")

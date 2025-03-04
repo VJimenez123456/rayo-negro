@@ -107,8 +107,6 @@ async def update_many_inventory_simple_service(
     connection = get_db_connection()
     cursor = connection.cursor(dictionary=True)
     try:
-        print("update_inventories_list0", len(update_inventories_list))
-        print("update_inventories_list1", update_inventories_list)
         cursor.executemany(sql_inventory_update, update_inventories_list)
         connection.commit()  # TODO: descomentar
         is_updated = True

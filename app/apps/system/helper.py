@@ -372,6 +372,7 @@ def fetch_shopify_variants_for_items(items_id: list) -> list:
         'inventory_item_ids': ','.join(map(str, items_id)),
         'limit': 250
     }
+    print("params--->", params)
     inventory = []
     try:
         while url:

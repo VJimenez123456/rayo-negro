@@ -180,6 +180,7 @@ async def update_inventory_for_id_items(var_inv_dict: Dict) -> list:
             inventories_list.extend(inventory_loc_list)
         if len(inventories_list) > 0:
             print("Actualizando inventario!!!")
+            print("inventories_list", inventories_list)
             await update_many_inventory_simple_service(inventories_list)
     finally:
         cursor.close()

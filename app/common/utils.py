@@ -14,7 +14,7 @@ def get_auth_headers_shopify(api_key: str, password: str):
 
 def get_credentials_shopify() -> dict:
     api_version = '2023-07'
-    api_key = settings.SHOPIFY_API_KEY,
+    api_key = settings.SHOPIFY_API_KEY
     password = settings.SHOPIFY_API_PASSWORD
     store_url = settings.SHOPIFY_STORE_URL
     base_url = f"https://{store_url}/admin/api/{api_version}"

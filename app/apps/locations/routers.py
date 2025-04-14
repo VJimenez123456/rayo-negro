@@ -11,9 +11,7 @@ router = APIRouter()
 
 
 @router.post("/create")
-async def create_location(location_dict: dict):
-    print("location_dict", location_dict)
-    location = LocationSchema(**location_dict)
+async def create_location(location: LocationSchema):
     is_created = await create_location_service(location)
     if not is_created:
         JSONResponse(
@@ -26,9 +24,7 @@ async def create_location(location_dict: dict):
 
 
 @router.post("/update")
-async def update_location(location_dict: dict):
-    print("location_dict", location_dict)
-    location = LocationSchema(**location_dict)
+async def update_location(location: LocationSchema):
     is_updated = await update_location_service(location)
     if not is_updated:
         JSONResponse(

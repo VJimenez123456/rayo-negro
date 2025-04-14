@@ -11,7 +11,7 @@ from mysql.connector import Error
 
 
 async def create_location_service(location: LocationSchema):
-    location_obj = (location.name, location.created_at, location.id)
+    location_obj = (location.name, location.id)
     print("location_obj-c", location_obj)
     connection = get_db_connection()
     cursor = connection.cursor(dictionary=True)

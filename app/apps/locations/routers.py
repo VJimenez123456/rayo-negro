@@ -26,7 +26,7 @@ async def create_location(location_dict: dict):
 
 
 @router.post("/update")
-async def update_location(location_dict: LocationSchema):
+async def update_location(location_dict: dict):
     print("location_dict", location_dict)
     location = LocationSchema(**location_dict)
     is_updated = await update_location_service(location)

@@ -40,3 +40,16 @@ def inventory_dict(inventories):
     # print("all_iventory-1", len(all_iventory))
     return all_iventory
 
+
+def inventory_level_one_location(inventory_level):
+    list_all_inventory_level_stock = []
+    for level in inventory_level:
+        inventory_item_id = level['inventory_item_id']
+        location_id = level['location_id']
+        available = level.get('available', 0)
+        list_all_inventory_level_stock.append({
+            "inventory_item_id": inventory_item_id,
+            "location_id": location_id,
+            "stock": available if available else 0
+        })
+    return list_all_inventory_level_stock

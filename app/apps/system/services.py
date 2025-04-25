@@ -27,6 +27,7 @@ from app.apps.products.services import (
     delete_product_service,
     get_all_products_in_db,
     get_variants_in_db,
+    get_variants_in_with_inventory_items,
     # create_variant,
     delete_many_variants_for_id,
     # delete_variant,
@@ -39,7 +40,10 @@ from app.apps.inventories.services import (
     delete_inventories_without_variants,
     get_variants_with_same_barcode,
 )
-from app.apps.locations.services import get_all_locations_in_db
+from app.apps.locations.services import (
+    get_all_locations_in_db,
+    get_one_location_in_db
+)
 from app.apps.products.models import (
     DeleteProductSchema, ProductSchema, Variant
 )
@@ -48,7 +52,10 @@ from app.apps.products.helper import (
     get_variants_in_shopify,
     get_variant_in_shopify,
 )
-from app.apps.inventories.helper import inventory_dict
+from app.apps.inventories.helper import (
+    inventory_dict,
+    inventory_level_one_location
+)
 from app.apps.inventories.models import InventoryObject
 
 
@@ -894,3 +901,54 @@ async def update_product_and_inventory(product_id: int) -> bool:
         print("product------>>>>>>>>>>><", product)
     except Exception as e:
         print(f"Error: {e}")
+
+
+async def update_variants_for_location_id_service(location_id: int) -> bool:
+    print("Init delete_products_not_exists_service")
+    init_time = time.time()
+    is_updated = False
+
+    # get location
+    location_in_db = await get_one_location_in_db(location_id)
+    # inventory in shopify
+    inventor_levels = fetch_shopify_variants_for_location(location_in_db)
+    print("Total inventories all locations:", len(inventor_levels))
+    inventor_levels_list = inventory_level_one_location(inventor_levels)
+    inventory_item_list = [
+        inv_id["inventory_item_id"] for inv_id in inventor_levels_list]
+
+    # inventory in db
+    variants_db = await get_variants_in_with_inventory_items(
+        inventory_item_list)
+    variants_db_dict = {}
+    for var in variants_db:
+        inventory_item_id = var["inventory_item_id"]
+        if inventory_item_id not in variants_db_dict:
+            variants_db_dict[inventory_item_id] = {}
+        variants_db_dict[inventory_item_id] = {
+            "id": var["id"], "barcode": var["barcode"]
+        }
+    print("Total variants in db:", len(variants_db_dict))
+
+    inventories_list = []
+    for item in inventor_levels_list:
+        inventory_item_id = item["inventory_item_id"]
+        if inventory_item_id in variants_db_dict:
+            inventory_dict = {
+                "variant_id": variants_db_dict[inventory_item_id]["id"],
+                "location_id": item["location_id"],
+                "barcode": variants_db_dict[inventory_item_id]["barcode"],
+                "stock": item["stock"]
+            }
+            inventories_list.append(InventoryObject(**inventory_dict))
+    print("inventories_list", inventories_list[:3])
+    print("inventories_list", len(inventories_list))
+    if len(inventories_list):
+        await update_many_inventory_simple_service(inventories_list)
+
+    # end
+    end_time = time.time()
+    duration = end_time - init_time
+    print("Finish delete_products_not_exists_service")
+    print(f"Execution time: {duration:.4f} seconds")
+    return is_updated

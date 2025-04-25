@@ -267,6 +267,29 @@ async def get_variants_in_db() -> list:
     return variants
 
 
+async def get_variants_in_with_inventory_items(inventory_items: list) -> list:
+    variants = []
+    try:
+        # connection
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)
+        get_variants = f"""
+            SELECT variant_id as id, barcode, inventory_item_id
+            FROM product_variant
+            WHERE inventory_item_id
+            IN ({', '.join(map(str, inventory_items))})
+            ORDER BY variant_id ASC
+        """
+        cursor.execute(get_variants)
+        variants = cursor.fetchall()
+    except Error as e:
+        print(f"Error get products {e}")
+        connection.rollback()
+    finally:
+        cursor.close()
+    return variants
+
+
 async def delete_variant(inventory_item_id: int) -> bool:
     connection = get_db_connection()
     cursor = connection.cursor(dictionary=True)

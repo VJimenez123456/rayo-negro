@@ -58,6 +58,28 @@ async def delete_location_service(location: DeleteLocationSchema):
     return is_deleted
 
 
+async def get_one_location_in_db(location_id) -> int:
+    location_in_db = []
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)
+        location_sql = f"""
+            SELECT location_shopify
+            FROM locations
+            WHERE SucursalID = {location_id}
+            AND location_shopify is not null
+            ORDER BY SucursalID ASC;
+        """
+        cursor.execute(location_sql)
+        location_in_db = cursor.fetchone()
+    except Error as e:
+        print(f"Error get products {e}")
+        connection.rollback()
+    finally:
+        cursor.close()
+    return location_in_db["location_shopify"]
+
+
 async def get_all_locations_in_db() -> list:
     locations_in_db = []
     try:

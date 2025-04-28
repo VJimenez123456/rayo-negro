@@ -414,6 +414,36 @@ def fetch_shopify_variant(variant_id: int) -> dict:
     return variant
 
 
+def get_all_products():
+    base_url, headers = get_credentials_shopify()
+    productos = []
+    url = f"{base_url}/products.json?limit=250"
+    session = requests.Session()
+    rate_limiter = RateLimiter(max_calls=4, period=1)
+    while url:
+        try:
+            rate_limiter.wait()
+            response = session.get(url, headers=headers)
+            if response.status_code == 200:
+                data = response.json()
+                productos.extend(data.get('products', []))
+            print(f"Productos obtenidos hasta ahora: {len(productos)}")
+
+            # Manejar paginación
+            link_header = response.headers.get('Link')
+            if link_header and 'rel="next"' in link_header:
+                next_url = link_header.split(';')[0].strip('<>')
+                url = next_url
+                # time.sleep(0.1)
+            else:
+                url = None
+        except requests.RequestException as e:
+            print(f"Error en la solicitud HTTP para productos. {e}")
+            time.sleep(3)
+    session.close()
+    return productos
+
+
 # # Función para insertar o actualizar productos, variantes e inventarios en la base de datos
 # def insert_or_update_products_variants_and_inventory(products, conn, locations, inventory_levels):
 

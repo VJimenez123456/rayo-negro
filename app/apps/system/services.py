@@ -16,6 +16,7 @@ from .helper import (
     select_loc_var_in_inventory,
     update_location_in_inventory,
     fetch_shopify_variant,
+    get_all_products
 )
 from app.database import get_db_connection
 from mysql.connector import Error
@@ -1020,5 +1021,40 @@ async def update_barcode_and_sku_variants_service() -> bool:
 
     end_time = time.time()
     print("Finish update_barcode_and_sku_variants")
+    print(f"Execution time: {end_time - init_time:.4f} seconds")
+    return is_updated
+
+
+async def update_or_create_products_and_variants_service():
+    print("Init update_or_create_products_and_variants")
+    init_time = time.time()
+    is_updated = False
+
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+
+    try:
+        productos = get_all_products()
+        products_schemas = []
+        for producto in productos:
+            products_schemas.append(ProductSchema(**producto))
+        # print("products_schemas0", products_schemas)
+        # products_schemas = products_schemas[1: 10]
+        # print("products_schemas1", products_schemas)
+        BATCH_SIZE = 500  # noqa
+        for i in range(0, len(products_schemas), BATCH_SIZE):
+            batch = products_schemas[i:i+BATCH_SIZE]
+            update_or_create_many_products_service(batch)
+            print(f"Batch {i//BATCH_SIZE + 1} updated successfully.")
+            time.sleep(1)
+
+    except Error as e:
+        print(f"Database error: {e}")
+    finally:
+        cursor.close()
+        connection.close()
+
+    end_time = time.time()
+    print("Finish update_or_create_products_and_variants")
     print(f"Execution time: {end_time - init_time:.4f} seconds")
     return is_updated

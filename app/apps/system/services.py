@@ -999,15 +999,19 @@ async def update_barcode_and_sku_variants_service() -> bool:
             BATCH_SIZE = 300  # noqa
             for i in range(0, len(update_product_variants), BATCH_SIZE):
                 batch = update_product_variants[i:i+BATCH_SIZE]
-                cursor.executemany(select_variant, batch)
-                connection.commit()
-                print(f"Batch {i//BATCH_SIZE + 1} updated successfully.")
+                try:
+                    cursor.executemany(select_variant, batch)
+                    connection.commit()
+                    print(f"Batch {i//BATCH_SIZE + 1} updated successfully.")
+                except Error as e:
+                    print(f"Error in batch {i//BATCH_SIZE + 1}: {e}")
+                    connection.rollback()
 
         is_updated = True
 
     except Error as e:
         print(f"Error en la inserción: {e}")
-        connection.rollback()
+        # connection.rollback()
     finally:
         cursor.close()
 

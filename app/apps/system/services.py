@@ -955,7 +955,7 @@ async def update_variants_for_location_id_service(location_id: int) -> bool:
     return is_updated
 
 
-def update_barcode_and_sku_variants_service() -> bool:
+async def update_barcode_and_sku_variants_service() -> bool:
     print("Init update_barcode_and_sku_variants")
     init_time = time.time()
     is_updated = False

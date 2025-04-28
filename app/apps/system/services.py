@@ -994,8 +994,14 @@ async def update_barcode_and_sku_variants_service() -> bool:
                 SET barcode = %s, sku = %s
                 WHERE variant_id = %s;
             # """
-            cursor.executemany(select_variant, update_product_variants)
-            connection.commit()
+
+            # Procesar en batches
+            BATCH_SIZE = 300  # noqa
+            for i in range(0, len(update_product_variants), BATCH_SIZE):
+                batch = update_product_variants[i:i+BATCH_SIZE]
+                cursor.executemany(select_variant, batch)
+                connection.commit()
+                print(f"Batch {i//BATCH_SIZE + 1} updated successfully.")
 
         is_updated = True
 

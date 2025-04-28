@@ -955,13 +955,14 @@ async def update_variants_for_location_id_service(location_id: int) -> bool:
     return is_updated
 
 
-async def update_barcode_and_sku_variants_service() -> bool:
-    print("Init update update_barcode_and_sku_variants")
+def update_barcode_and_sku_variants_service() -> bool:
+    print("Init update_barcode_and_sku_variants")
     init_time = time.time()
     is_updated = False
-    # connection
+
     connection = get_db_connection()
     cursor = connection.cursor(dictionary=True)
+
     try:
         select_all_variants = """
             SELECT variant_id, barcode, sku
@@ -970,53 +971,54 @@ async def update_barcode_and_sku_variants_service() -> bool:
         """
         cursor.execute(select_all_variants)
         variants_in_bd = cursor.fetchall()
-        if len(variants_in_bd) > 0:
-            print("Inventories in bd:", len(variants_in_bd))
-            variants_ids_list = [item["variant_id"] for item in variants_in_bd] # noqa
-            update_product_variants = []
+        cursor.close()
 
-            for variant_id in variants_ids_list:
-                variant: dict = fetch_shopify_variant(variant_id)
-                # print("variant", variant)
-                update_product_variants.append(
-                    (
-                        variant["barcode"] if variant.get(
-                            "barcode") else "Unknown",
-                        variant["sku"] if variant.get("sku") else "Unknown",
-                        variant.get("id")
-                    )
-                )
+        if not variants_in_bd:
+            print("No inventories with Unknown sku or barcode.")
+            return True
 
-            print("update_product_variants", update_product_variants)
+        print(f"Found {len(variants_in_bd)} variants to update.")
 
-            select_variant = """
-                UPDATE product_variant
-                SET barcode = %s, sku = %s
-                WHERE variant_id = %s;
-            # """
+        update_product_variants = []
+        for item in variants_in_bd:
+            variant_id = item["variant_id"]
+            try:
+                variant = fetch_shopify_variant(variant_id)
+                update_product_variants.append((
+                    variant.get("barcode", "Unknown") or "Unknown",
+                    variant.get("sku", "Unknown") or "Unknown",
+                    variant.get("id")
+                ))
+            except Exception as e:
+                print(f"Error fetching variant {variant_id}: {e}")
 
-            # Procesar en batches
-            BATCH_SIZE = 300  # noqa
-            for i in range(0, len(update_product_variants), BATCH_SIZE):
-                batch = update_product_variants[i:i+BATCH_SIZE]
-                try:
-                    cursor.executemany(select_variant, batch)
-                    connection.commit()
-                    print(f"Batch {i//BATCH_SIZE + 1} updated successfully.")
-                except Error as e:
-                    print(f"Error in batch {i//BATCH_SIZE + 1}: {e}")
-                    connection.rollback()
+        cursor = connection.cursor()
+        update_query = """
+            UPDATE product_variant
+            SET barcode = %s, sku = %s
+            WHERE variant_id = %s;
+        """
+
+        BATCH_SIZE = 300  # noqa
+        for i in range(0, len(update_product_variants), BATCH_SIZE):
+            batch = update_product_variants[i:i+BATCH_SIZE]
+            try:
+                cursor.executemany(update_query, batch)
+                connection.commit()
+                print(f"Batch {i//BATCH_SIZE + 1} updated successfully.")
+            except Error as e:
+                print(f"Error in batch {i//BATCH_SIZE + 1}: {e}")
+                connection.rollback()
 
         is_updated = True
 
     except Error as e:
-        print(f"Error en la inserción: {e}")
-        # connection.rollback()
+        print(f"Database error: {e}")
     finally:
         cursor.close()
+        connection.close()
 
     end_time = time.time()
-    duration = end_time - init_time
-    print("Finish update barcode_inventory")
-    print(f"Execution time: {duration:.4f} seconds")
+    print("Finish update_barcode_and_sku_variants")
+    print(f"Execution time: {end_time - init_time:.4f} seconds")
     return is_updated

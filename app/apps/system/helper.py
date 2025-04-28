@@ -395,6 +395,25 @@ def fetch_shopify_variants_for_items(items_id: list) -> list:
     return inventory
 
 
+def fetch_shopify_variant(variant_id: int) -> dict:
+    base_url, headers = get_credentials_shopify()
+    session = requests.Session()
+    variant = {}
+    rate_limiter = RateLimiter(max_calls=4, period=1)
+    base_url = f"{base_url}/variants/{variant_id}.json"
+    try:
+        rate_limiter.wait()
+        response = session.get(base_url, headers=headers)
+        # log_api_call(response)
+        if response.status_code == 200:
+            data = response.json()
+            variant = data.get('variant', {})
+    except requests.RequestException as e:
+        print(f"Error en la solicitud HTTP para inventario.")
+    session.close()
+    return variant
+
+
 # # Función para insertar o actualizar productos, variantes e inventarios en la base de datos
 # def insert_or_update_products_variants_and_inventory(products, conn, locations, inventory_levels):
 

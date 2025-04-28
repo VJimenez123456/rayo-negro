@@ -5,16 +5,17 @@ from .helper import (
     delete_inventory,
     # fetch_all_inventory_levels,
     fetch_inventory_levels,
-    fetch_locations,
+    # fetch_locations,
     fetch_shopify_one_product,
     # fetch_shopify_products,
     fetch_shopify_variants,
     fetch_shopify_variants_for_location,
-    get_location_ids,
+    # get_location_ids,
     select_all_locations,
     select_inventory,
     select_loc_var_in_inventory,
     update_location_in_inventory,
+    fetch_shopify_variant,
 )
 from app.database import get_db_connection
 from mysql.connector import Error
@@ -152,7 +153,7 @@ async def update_variants_for_locations_service() -> bool:
     #     print("delete", variants_db_dict[inventory_item_id])
 
     # # for create variants
-    create = list(set_shopy - set_db)
+    # create = list(set_shopy - set_db)
     # print("create", create[:3])
     # print("create", len(create))
     # create new variants:::
@@ -950,5 +951,62 @@ async def update_variants_for_location_id_service(location_id: int) -> bool:
     end_time = time.time()
     duration = end_time - init_time
     print("Finish delete_products_not_exists_service")
+    print(f"Execution time: {duration:.4f} seconds")
+    return is_updated
+
+
+async def update_barcode_and_sku_variants_service() -> bool:
+    print("Init update update_barcode_and_sku_variants")
+    init_time = time.time()
+    is_updated = False
+    # connection
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    try:
+        select_all_variants = """
+            SELECT variant_id, barcode, sku
+            FROM product_variant
+            WHERE sku = 'Unknown' OR barcode = 'Unknown';
+        """
+        cursor.execute(select_all_variants)
+        variants_in_bd = cursor.fetchall()
+        if len(variants_in_bd) > 0:
+            print("Inventories in bd:", len(variants_in_bd))
+            variants_ids_list = [item["variant_id"] for item in variants_in_bd] # noqa
+            update_product_variants = []
+
+            for variant_id in variants_ids_list:
+                variant: dict = fetch_shopify_variant(variant_id)
+                # print("variant", variant)
+                update_product_variants.append(
+                    (
+                        variant["barcode"] if variant.get(
+                            "barcode") else "Unknown",
+                        variant["sku"] if variant.get("sku") else "Unknown",
+                        variant.get("id")
+                    )
+                )
+
+            print("update_product_variants", update_product_variants)
+
+            select_variant = """
+                UPDATE product_variant
+                SET barcode = %s, sku = %s
+                WHERE variant_id = %s;
+            # """
+            cursor.executemany(select_variant, update_product_variants)
+            connection.commit()
+
+        is_updated = True
+
+    except Error as e:
+        print(f"Error en la inserción: {e}")
+        connection.rollback()
+    finally:
+        cursor.close()
+
+    end_time = time.time()
+    duration = end_time - init_time
+    print("Finish update barcode_inventory")
     print(f"Execution time: {duration:.4f} seconds")
     return is_updated

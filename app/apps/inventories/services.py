@@ -25,25 +25,27 @@ async def update_inventory_service(inventory: InventorySchema):
     cursor.execute(select_barcode_variant, (inventory.inventory_item_id,))
     result_barcode = cursor.fetchone()
     variant_id, barcode = None, None
+    is_updated = False
     if result_barcode:
         variant_id = result_barcode["id"]
         barcode = result_barcode["barcode"]
-
-    is_updated = False
-    if location_id:
-        inventory_obj = (
-            variant_id,
-            location_id,
-            barcode,
-            inventory.available
-        )
-        print("inventory_obj", inventory_obj)
-        try:
-            cursor.execute(sql_inventory_update, inventory_obj)
-            connection.commit()
-            is_updated = True
-        finally:
-            cursor.close()
+        if location_id:
+            inventory_obj = (
+                variant_id,
+                location_id,
+                barcode,
+                inventory.available
+            )
+            print("inventory_obj", inventory_obj)
+            try:
+                cursor.execute(sql_inventory_update, inventory_obj)
+                connection.commit()
+                is_updated = True
+            finally:
+                cursor.close()
+    else:
+        print("inventory_dict", inventory.model_dump())
+        print("is_updated = False")
     return is_updated
 
 
@@ -180,7 +182,7 @@ async def update_inventory_for_id_items(var_inv_dict: Dict) -> list:
             inventories_list.extend(inventory_loc_list)
         if len(inventories_list) > 0:
             print("Actualizando inventario!!!")
-            print("inventories_list", inventories_list)
+            # print("inventories_list", inventories_list)
             await update_many_inventory_simple_service(inventories_list)
     finally:
         cursor.close()

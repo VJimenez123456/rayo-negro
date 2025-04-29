@@ -981,6 +981,7 @@ async def update_barcode_and_sku_variants_service() -> bool:
         print(f"Found {len(variants_in_bd)} variants to update.")
 
         update_product_variants = []
+        update_inventory_list = []
         for item in variants_in_bd:
             variant_id = item["variant_id"]
             try:
@@ -990,23 +991,43 @@ async def update_barcode_and_sku_variants_service() -> bool:
                     variant.get("sku", "Unknown") or "Unknown",
                     variant.get("id")
                 ))
+                update_inventory_list.append((
+                    variant.get("barcode", "Unknown") or "Unknown",
+                    variant.get("id")
+                ))
             except Exception as e:
                 print(f"Error fetching variant {variant_id}: {e}")
 
         cursor = connection.cursor()
-        update_query = """
+
+        BATCH_SIZE = 300  # noqa
+        # for products variants
+        update_product_variant_query = """
             UPDATE product_variant
             SET barcode = %s, sku = %s
             WHERE variant_id = %s;
         """
-
-        BATCH_SIZE = 300  # noqa
         for i in range(0, len(update_product_variants), BATCH_SIZE):
             batch = update_product_variants[i:i+BATCH_SIZE]
             try:
-                cursor.executemany(update_query, batch)
+                cursor.executemany(update_product_variant_query, batch)
                 connection.commit()
-                print(f"Batch {i//BATCH_SIZE + 1} updated successfully.")
+                print(f"Batch var {i//BATCH_SIZE + 1} updated successfully.")
+            except Error as e:
+                print(f"Error in batch {i//BATCH_SIZE + 1}: {e}")
+                connection.rollback()
+        # for inventory
+        update_inventory_query = """
+            UPDATE inventory
+            SET barcode = %s
+            WHERE variant_id = %s;
+        """
+        for i in range(0, len(update_inventory_list), BATCH_SIZE):
+            batch = update_inventory_list[i:i+BATCH_SIZE]
+            try:
+                cursor.executemany(update_inventory_query, batch)
+                connection.commit()
+                print(f"Batch inv {i//BATCH_SIZE + 1} updated successfully.")
             except Error as e:
                 print(f"Error in batch {i//BATCH_SIZE + 1}: {e}")
                 connection.rollback()

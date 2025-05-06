@@ -1111,6 +1111,13 @@ async def delete_duplicate_inventory_and_variants_service():
             if not variant.get('id'):
                 inventory_delete_list.append(variant_id)
         print("inventory_delete_list", inventory_delete_list)
+        sql_delete = f"""
+            DELETE FROM inventory
+            WHERE variant_id
+            IN ({', '.join(map(str, inventory_delete_list))});
+        """
+        print("sql_delete", sql_delete)
+        # cursor.execute(sql_delete)
 
     except Error as e:
         print(f"Database error: {e}")

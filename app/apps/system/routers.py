@@ -19,6 +19,7 @@ from .services import (
     update_variants_for_location_id_service,
     update_barcode_and_sku_variants_service,
     update_or_create_products_and_variants_service,
+    delete_duplicate_inventory_and_variants_service,
 )
 from starlette.responses import JSONResponse
 
@@ -219,4 +220,17 @@ async def update_or_create_products_and_variants():
         )
     return {
         "message": "Successfully updated update_inventory_level",
+    }
+
+
+@router.get("/delete/duplicate_inventory_and_variants")
+async def delete_duplicate_inventory_and_variants():
+    is_updated = await delete_duplicate_inventory_and_variants_service()
+    if not is_updated:
+        JSONResponse(
+            {"message": "Error in update duplicate_inventory_and_variants"},
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
+    return {
+        "message": "Successfully updated duplicate_inventory_and_variants",
     }

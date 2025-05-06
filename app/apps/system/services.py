@@ -1079,3 +1079,46 @@ async def update_or_create_products_and_variants_service():
     print("Finish update_or_create_products_and_variants")
     print(f"Execution time: {end_time - init_time:.4f} seconds")
     return is_updated
+
+
+async def delete_duplicate_inventory_and_variants_service():
+    print("Init update_or_create_products_and_variants")
+    init_time = time.time()
+    is_updated = False
+
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    sql_duplicates = """
+        SELECT i.* FROM inventory i
+        JOIN (
+            SELECT barcode, location_id
+            FROM inventory GROUP BY barcode, location_id
+            HAVING COUNT(*) > 1) dup ON i.barcode = dup.barcode
+            AND i.location_id = dup.location_id;
+    """
+
+    try:
+        cursor.execute(sql_duplicates)
+        inventory_duplicates = cursor.fetchall()
+        inventory_duplicates_unique_set = set()
+        for inventory in inventory_duplicates:
+            inventory_duplicates_unique_set.add(inventory["variant_id"])
+        inventory_duplicates_unique_list = list(
+            inventory_duplicates_unique_set)
+        inventory_delete_list = []
+        for variant_id in inventory_duplicates_unique_list:
+            variant = fetch_shopify_variant(variant_id)
+            if not variant.get('id'):
+                inventory_delete_list.append(variant_id)
+        print("inventory_delete_list", inventory_delete_list)
+
+    except Error as e:
+        print(f"Database error: {e}")
+    finally:
+        cursor.close()
+        connection.close()
+
+    end_time = time.time()
+    print("Finish update_or_create_products_and_variants")
+    print(f"Execution time: {end_time - init_time:.4f} seconds")
+    return is_updated

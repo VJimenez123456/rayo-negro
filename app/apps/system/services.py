@@ -1110,18 +1110,20 @@ async def delete_duplicate_inventory_and_variants_service():
             variant = fetch_shopify_variant(variant_id)
             if not variant.get('id'):
                 inventory_delete_list.append(variant_id)
-        sql_delete_inventory = f"""
-            DELETE FROM inventory
-            WHERE variant_id
-            IN ({', '.join(map(str, inventory_delete_list))});
-        """
-        sql_delete_variants = f"""
-            DELETE FROM product_variant
-            WHERE variant_id
-            IN ({', '.join(map(str, inventory_delete_list))});
-        """
-        cursor.execute(sql_delete_inventory)
-        cursor.execute(sql_delete_variants)
+
+        if len(inventory_delete_list) > 0:
+            sql_delete_inventory = f"""
+                DELETE FROM inventory
+                WHERE variant_id
+                IN ({', '.join(map(str, inventory_delete_list))});
+            """
+            sql_delete_variants = f"""
+                DELETE FROM product_variant
+                WHERE variant_id
+                IN ({', '.join(map(str, inventory_delete_list))});
+            """
+            cursor.execute(sql_delete_inventory)
+            cursor.execute(sql_delete_variants)
         print("inventory_delete_len:", len(inventory_delete_list))
 
     except Error as e:

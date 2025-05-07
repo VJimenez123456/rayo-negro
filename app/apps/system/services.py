@@ -1065,7 +1065,7 @@ async def update_or_create_products_and_variants_service():
         BATCH_SIZE = 500  # noqa
         for i in range(0, len(products_schemas), BATCH_SIZE):
             batch = products_schemas[i:i+BATCH_SIZE]
-            update_or_create_many_products_service(batch)
+            await update_or_create_many_products_service(batch)
             print(f"Batch {i//BATCH_SIZE + 1} updated successfully.")
             time.sleep(1)
 

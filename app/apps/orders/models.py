@@ -22,8 +22,8 @@ class ShippingAddress(BaseModel):
 
 
 class Address(BaseModel):
-    id: int
-    customer_id: Optional[str] = None
+    id: Optional[int] = None
+    customer_id: Optional[int] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     company: Optional[str] = None

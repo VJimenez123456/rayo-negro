@@ -16,7 +16,7 @@ from .helper import (
     select_loc_var_in_inventory,
     update_location_in_inventory,
     fetch_shopify_variant,
-    get_all_products
+    get_all_orders_shopify,
 )
 from app.database import get_db_connection
 from mysql.connector import Error
@@ -46,8 +46,14 @@ from app.apps.locations.services import (
     get_all_locations_in_db,
     get_one_location_in_db
 )
+from app.apps.orders.services import (
+    update_or_create_many_orders_service
+)
 from app.apps.products.models import (
     DeleteProductSchema, ProductSchema, Variant
+)
+from app.apps.orders.models import (
+    OrderSchema
 )
 from app.apps.products.helper import (
     get_products_in_shopify,
@@ -1135,4 +1141,30 @@ async def delete_duplicate_inventory_and_variants_service():
     end_time = time.time()
     print("Finish update_or_create_products_and_variants")
     print(f"Execution time: {end_time - init_time:.4f} seconds")
+    return is_updated
+
+
+async def update_orders_service():
+    print("Init update update_orders")
+    init_time = time.time()
+    is_updated = False
+
+    # Get orders
+    print("Obteniendo detalles de pedidos de Shopify...")
+    orders_shopify = get_all_orders_shopify()
+    print(f"Amount of orders in shofify: {len(orders_shopify)}")
+
+    update_or_create_orders_schema = [
+        OrderSchema(**order) for order in orders_shopify
+    ]
+    await update_or_create_many_orders_service(
+        update_or_create_orders_schema)
+    print(
+        "update_or_create_orders_schema",
+        len(update_or_create_orders_schema)
+    )
+    end_time = time.time()
+    duration = end_time - init_time
+    print("Finish update update_orders")
+    print(f"Execution time: {duration:.4f} seconds")
     return is_updated

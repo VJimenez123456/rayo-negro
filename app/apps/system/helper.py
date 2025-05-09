@@ -414,6 +414,36 @@ def fetch_shopify_variant(variant_id: int) -> dict:
     return variant
 
 
+def get_all_orders_shopify() -> dict:
+    base_url, headers = get_credentials_shopify()
+    orders = []
+    url = f"{base_url}/orders.json?limit=250"
+    session = requests.Session()
+    rate_limiter = RateLimiter(max_calls=4, period=1)
+    while url:
+        try:
+            rate_limiter.wait()
+            response = session.get(url, headers=headers, verify=False)
+            if response.status_code == 200:
+                data = response.json()
+                orders.extend(data.get('orders', []))
+            print(f"orders obtenidos hasta ahora: {len(orders)}")
+
+            # Manejar paginación
+            link_header = response.headers.get('Link')
+            if link_header and 'rel="next"' in link_header:
+                next_url = link_header.split(';')[0].strip('<>')
+                url = next_url
+                # time.sleep(0.1)
+            else:
+                url = None
+        except requests.RequestException as e:
+            print(f"Error en la solicitud HTTP para orders. {e}")
+            time.sleep(3)
+    session.close()
+    return orders
+
+
 def get_all_products():
     base_url, headers = get_credentials_shopify()
     productos = []

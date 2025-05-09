@@ -79,7 +79,7 @@ class LineItem(BaseModel):
     quantity: int
     # requires_shipping: bool
     # sales_line_item_group_id: Optional[Any]
-    sku: str
+    sku: str | int | None
     # taxable: bool
     title: str
     # total_discount: str

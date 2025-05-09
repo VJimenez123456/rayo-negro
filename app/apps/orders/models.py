@@ -74,7 +74,7 @@ class LineItem(BaseModel):
     price: str
     # price_set: Optional[Any]
     # product_exists: bool
-    product_id: int
+    product_id: str | int | None
     # properties: List[Any]
     quantity: int
     # requires_shipping: bool
@@ -84,7 +84,7 @@ class LineItem(BaseModel):
     title: str
     # total_discount: str
     # total_discount_set: Optional[Any]
-    variant_id: int
+    variant_id: str | int | None
     # variant_inventory_management: Optional[str]
     # variant_title: Optional[str]
     # vendor: str

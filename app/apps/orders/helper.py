@@ -86,24 +86,25 @@ def parser_items(
     ) -> List[tuple]:
     items_objs = []
     for item in items:
-        variant_id = item.variant_id
-        _sku = item.sku if item.sku else ""
-        validacion_sku = ''
-        image_url = ''
-        items_objs.append((
-            item.id,
-            order_id,
-            item.product_id,
-            variant_id,
-            item.title,
-            item.quantity,
-            item.price,
-            _sku,
-            barcodes_dict.get(item.variant_id, "Unknown"),
-            validacion_sku,
-            image_url,
+        if item.product_id:
+            variant_id = item.variant_id
+            _sku = item.sku if item.sku else ""
+            validacion_sku = ''
+            image_url = ''
+            items_objs.append((
+                item.id,
+                order_id,
+                item.product_id,
+                variant_id,
+                item.title,
+                item.quantity,
+                item.price,
+                _sku,
+                barcodes_dict.get(item.variant_id, "Unknown"),
+                validacion_sku,
+                image_url,
 
-        ))
+            ))
     return items_objs
 
 

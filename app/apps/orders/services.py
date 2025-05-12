@@ -63,13 +63,13 @@ async def update_or_create_many_orders_service(
         BATCH_SIZE = 500  # noqa
         for i in range(0, len(total_order_obj), BATCH_SIZE):
             batch1 = total_order_obj[i:i+BATCH_SIZE]
-            # cursor.executemany(sql_order_update, batch1)
+            cursor.executemany(sql_order_update, batch1)
             print(f"Batch {i//BATCH_SIZE + 1} updated successfully.")
         print("======================order_items======================")
         # for order_items
         for i in range(0, len(total_order_items), BATCH_SIZE):
             batch2 = total_order_items[i:i+BATCH_SIZE]
-            # cursor.executemany(sql_items_update, batch2)
+            cursor.executemany(sql_items_update, batch2)
             print(f"Batch {i//BATCH_SIZE + 1} updated successfully.")
         connection.commit()
         is_created = True

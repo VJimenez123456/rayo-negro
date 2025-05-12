@@ -1157,8 +1157,8 @@ async def update_orders_service():
     update_or_create_orders_schema = [
         OrderSchema(**order) for order in orders_shopify
     ]
-    # await update_or_create_many_orders_service(
-    #     update_or_create_orders_schema)
+    await update_or_create_many_orders_service(
+        update_or_create_orders_schema)
     print(
         "update_or_create_orders_schema",
         len(update_or_create_orders_schema)

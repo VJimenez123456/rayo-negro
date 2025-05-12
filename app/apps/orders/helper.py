@@ -87,6 +87,7 @@ def parser_items(
     items_objs = []
     for item in items:
         variant_id = item.variant_id
+        _sku = item.sku if item.sku else ""
         validacion_sku = ''
         image_url = ''
         items_objs.append((
@@ -97,7 +98,7 @@ def parser_items(
             item.title,
             item.quantity,
             item.price,
-            item.sku,
+            _sku,
             barcodes_dict.get(item.variant_id, "Unknown"),
             validacion_sku,
             image_url,

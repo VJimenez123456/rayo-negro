@@ -2,7 +2,9 @@
 import requests
 from requests import Response
 import time
+import os
 from collections import deque
+import certifi
 import random
 import unicodedata
 from app.core.config import settings
@@ -418,12 +420,15 @@ def get_all_orders_shopify() -> dict:
     base_url, headers = get_credentials_shopify()
     orders = []
     url = f"{base_url}/orders.json?limit=250"
+    cert_path = os.environ.get('SSL_CERT_FILE', certifi.where())
     session = requests.Session()
+    session.verify = cert_path
     rate_limiter = RateLimiter(max_calls=4, period=1)
     while url:
         try:
             rate_limiter.wait()
-            response = session.get(url, headers=headers, verify=False)
+            response = session.get(url, headers=headers)
+            print("response.status_code", response.status_code)
             if response.status_code == 200:
                 data = response.json()
                 orders.extend(data.get('orders', []))
@@ -439,7 +444,7 @@ def get_all_orders_shopify() -> dict:
                 url = None
         except requests.RequestException as e:
             print(f"Error en la solicitud HTTP para orders. {e}")
-            time.sleep(3)
+            # time.sleep(3)
     session.close()
     return orders
 

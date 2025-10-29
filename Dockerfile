@@ -57,4 +57,4 @@ COPY app/ app/
 EXPOSE 8000
 
 # Usa el script de inicio como comando
-CMD ["/app/start.sh"]
+CMD ["bash", "/app/start.sh"]

@@ -18,9 +18,11 @@ from .services import (
     delete_duplicate_variants_service,
     update_variants_for_location_id_service,
     update_barcode_and_sku_variants_service,
-    update_or_create_products_and_variants_service,
+    # update_or_create_products_and_variants_service,
     delete_duplicate_inventory_and_variants_service,
     update_orders_service,
+    update_or_create_products_and_variants_shopify_service,
+    synchronize_inventory_service,
 )
 from starlette.responses import JSONResponse
 
@@ -211,17 +213,17 @@ async def update_barcode_and_sku_variants():
     }
 
 
-@router.get("/update/all_products")
-async def update_or_create_products_and_variants():
-    is_updated = await update_or_create_products_and_variants_service()
-    if not is_updated:
-        JSONResponse(
-            {"message": "Error in update update_inventory_level"},
-            status_code=status.HTTP_400_BAD_REQUEST
-        )
-    return {
-        "message": "Successfully updated update_inventory_level",
-    }
+# @router.get("/update/all_products")
+# async def update_or_create_products_and_variants():
+#     is_updated = await update_or_create_products_and_variants_service()
+#     if not is_updated:
+#         JSONResponse(
+#             {"message": "Error in update update_inventory_level"},
+#             status_code=status.HTTP_400_BAD_REQUEST
+#         )
+#     return {
+#         "message": "Successfully updated update_inventory_level",
+#     }
 
 
 @router.get("/delete/duplicate_inventory_and_variants")
@@ -247,4 +249,43 @@ async def update_all_orders():
         )
     return {
         "message": "Successfully updated update_inventory_level",
+    }
+
+
+# @router.get("/update/all_products")
+# async def update_or_create_products_and_variants():
+#     is_updated = await update_or_create_products_and_variants_service()
+#     if not is_updated:
+#         JSONResponse(
+#             {"message": "Error in update update_inventory_level"},
+#             status_code=status.HTTP_400_BAD_REQUEST
+#         )
+#     return {
+#         "message": "Successfully updated update_inventory_level",
+#     }
+
+
+@router.get("/update/all_products_shopify")
+async def update_or_create_products_and_variants_shopify():
+    is_updated = await update_or_create_products_and_variants_shopify_service()
+    if not is_updated:
+        JSONResponse(
+            {"message": "Error in update update_or_create_products_and_variants_shopify"},
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
+    return {
+        "message": "Successfully updated update_or_create_products_and_variants_shopify",
+    }
+
+
+@router.get("/update/synchronize_inventory")
+async def synchronize_inventory():
+    is_updated = await synchronize_inventory_service()
+    if not is_updated:
+        JSONResponse(
+            {"message": "Error in update synchronize_inventory"},
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
+    return {
+        "message": "Successfully updated synchronize_inventory",
     }

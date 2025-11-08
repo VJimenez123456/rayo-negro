@@ -1,17 +1,30 @@
 services:
   server:
-    container_name: fastapi_rayo_negro
+    container_name: rayo_negro_fastapi
     build:
       context: .
     ports:
-      - 8000:8000
+      - "8000:8000"
     env_file:
       - .env
-    volumes:
-      - .:/app
     environment:
-      DEBUG: 1
-    restart: on-failure
+      DEBUG: "0"
+      APP_LOG_LEVEL: "info"
+      APP_ACCESS_LOG: "0"
+      # CHECK_SSL: "1"
+      CHECK_SHOPIFY: "1"
+      SHOPIFY_SHOP_DOMAIN: "rayo-negro-mx.myshopify.com"
+      SHOPIFY_CHECK_RETRIES: "2"
+      SHOPIFY_CHECK_TIMEOUT: "5"
+      FAIL_ON_SHOPIFY_CHECK: "0"
+    volumes:
+      - ./app:/app/app            # NO montes la raíz completa
+    restart: always
+    logging:
+      driver: "local"             # o "json-file"
+      options:
+        max-size: "10m"           # rota cada 10 MB
+        max-file: "5"    
 
   # mysql:
   #   image: mysql:8.0
@@ -22,29 +35,94 @@ services:
   #     - "3306:3306"
   #   command: --default-authentication-plugin=mysql_native_password
 
-  # airflow-webserver:
-  #   image: apache/airflow:2.9.1
+  # redis:
+  #   image: redis:7
+  #   container_name: rayo_negro_redis
+  #   command: ["redis-server", "--appendonly", "yes"]
   #   restart: always
-  #   depends_on:
-  #     - mysql
-  #   command: ["webserver"]
-  #   env_file:
-  #     - ./.envs/.apache
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 5s
+  #     timeout: 3s
+  #     retries: 30
   #   volumes:
-  #     - ./dags:/opt/airflow/dags
-  #   ports:
-  #     - "8080:8080"
+  #     - redis-data:/data
+  #   logging:
+  #     driver: "local"
+  #     options:
+  #       max-size: "10m"
+  #       max-file: "5"
 
-  # airflow-scheduler:
-  #   image: apache/airflow:2.9.1
+  # celery_worker:
+  #   build:
+  #     context: .
+  #   container_name: rayo_negro_celery_worker
+  #   env_file:
+  #     - .env
+  #   environment:
+  #     TZ: "America/Bogota"
+  #     CELERY_BROKER_URL: "redis://redis:6379/0"
+  #     CELERY_RESULT_BACKEND: "redis://redis:6379/1"
+  #   command: >
+  #     bash -lc "celery -A app.core.celery_app.celery worker
+  #     -l info --concurrency=2"
+  #   volumes:
+  #     - ./app:/app/app
   #   restart: always
   #   depends_on:
-  #     - airflow-webserver
-  #   command: ["scheduler"]
+  #     redis:
+  #       condition: service_healthy
+  #   logging:
+  #     driver: "local"
+  #     options:
+  #       max-size: "10m"
+  #       max-file: "5"
+
+  # celery_beat:
+  #   build:
+  #     context: .
+  #   container_name: rayo_negro_celery_beat
   #   env_file:
-  #     - ./.envs/.apache
+  #     - .env
+  #   environment:
+  #     TZ: "America/Bogota"
+  #     CELERY_BROKER_URL: "redis://redis:6379/0"
+  #     CELERY_RESULT_BACKEND: "redis://redis:6379/1"
+  #   command: >
+  #     bash -lc "celery -A app.core.celery_app.celery beat
+  #     -l info --pidfile= --schedule=/tmp/celerybeat-schedule.db"
   #   volumes:
-  #     - ./dags:/opt/airflow/dags
+  #     - ./app:/app/app
+  #   restart: always
+  #   depends_on:
+  #     redis:
+  #       condition: service_healthy
+  #   logging:
+  #     driver: "local"
+  #     options:
+  #       max-size: "10m"
+  #       max-file: "5"
+
+  # # flower:
+  # #   image: mher/flower:2.0.1   # fija versión
+  # #   container_name: rayo_negro_flower
+  # #   ports:
+  # #     - "5555:5555"
+  # #   command:
+  # #     - "flower"
+  # #     - "--broker=redis://redis:6379/0"
+  # #     - "--result-backend=redis://redis:6379/1"
+  # #     - "--port=5555"
+  # #     - "--url-prefix=/"
+  # #     - "--persistent=true"
+  # #     - "--state-save-interval=10"
+  # #     # - "--basic_auth=user:pass"  # opcional
+  # #   depends_on:
+  # #     redis:
+  # #       condition: service_healthy
+  # #   restart: always
 
 volumes:
   db-data:
+  redis-data:
+

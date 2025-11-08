@@ -14,8 +14,12 @@ from app.common.utils import (
     get_link_next,
     log_api_call,
     RateLimiter,
+    make_session,
+    MAX_CALLS_PER_SECOND,
+    MIN_INTERVAL,
+    get_retry_after,
 )
-
+from typing import List, Dict, Any, Iterable, Tuple
 
 DESIRED_LOCATIONS = [
     'CANCÚN',
@@ -415,6 +419,76 @@ def fetch_shopify_variant(variant_id: int) -> dict:
     session.close()
     return variant
 
+def fetch_shopify_variant_single(
+    session: requests.Session,
+    base_url: str,
+    headers: Dict[str, str],
+    variant_id: int,
+    rate_limiter: RateLimiter,
+    timeout: float = 30.0,
+) -> Dict[str, Any]:
+    """
+    Obtiene una variante individual, respetando rate limit = 4 rps.
+    Maneja 429 con Retry-After. Devuelve {} si falla.
+    """
+    url = f"{base_url}/variants/{int(variant_id)}.json"
+
+    # Cada intento pasa por el limiter
+    rate_limiter.wait()
+    resp = session.get(url, headers=headers, timeout=timeout)
+
+    if resp.status_code == 200:
+        return resp.json().get("variant", {}) or {}
+
+    if resp.status_code == 429:
+        # Respeta Retry-After y reintenta una vez manualmente acá
+        wait_s = get_retry_after(resp.headers, default_seconds=1.0)
+        time.sleep(wait_s)
+        rate_limiter.wait()
+        resp = session.get(url, headers=headers, timeout=timeout)
+        if resp.status_code == 200:
+            return resp.json().get("variant", {}) or {}
+
+    # Para 5xx, los reintentos principales los maneja la Session; si aún así cae aquí:
+    if 500 <= resp.status_code < 600:
+        time.sleep(0.5 + random.random() * 0.7)
+        rate_limiter.wait()
+        resp = session.get(url, headers=headers, timeout=timeout)
+        if resp.status_code == 200:
+            return resp.json().get("variant", {}) or {}
+
+    # Log opcional:
+    # print(f"[{variant_id}] Error {resp.status_code}: {resp.text[:200]}")
+    return {}
+
+def fetch_shopify_variants_bulk(variant_ids: List[int]) -> List[Dict[str, Any]]:
+    """
+    Obtiene en bloque todas las variantes pasadas. Garantiza no exceder 4 rps.
+    Reutiliza Session y RateLimiter. Devuelve lista con los dicts de 'variant' (o {} en fallos).
+    """
+    if not variant_ids:
+        return []
+
+    base_url, headers = get_credentials_shopify()
+    session = make_session()
+    limiter = RateLimiter(max_calls=MAX_CALLS_PER_SECOND, period=1.0, min_interval=MIN_INTERVAL)
+
+    results: List[Dict[str, Any]] = []
+    try:
+        for vid in variant_ids:
+            variant = fetch_shopify_variant_single(
+                session=session,
+                base_url=base_url,
+                headers=headers,
+                variant_id=vid,
+                rate_limiter=limiter,
+            )
+            results.append(variant)
+    finally:
+        session.close()
+
+    return results
+
 
 def get_all_orders_shopify() -> dict:
     base_url, headers = get_credentials_shopify()
@@ -693,3 +767,188 @@ def get_all_products():
 #         print("Transacción revertida debido a un error.")
 
 #     cursor.close()
+
+# ----------------- Chunking por URL y por cantidad -----------------
+def chunk_ids_by_url_capacity(
+    base_url: str,
+    ids: List[int],
+    max_ids_per_call: int = 50,
+    url_max_len: int = 3800,
+    limit_param: int = 250,
+) -> Iterable[List[int]]:
+    """
+    Parte la lista de ids en trozos que no excedan:
+      - max_ids_per_call (p.ej. 50)
+      - url_max_len (p.ej. ~3800 chars)
+    Se calcula la URL exacta con requests para asegurar longitud.
+    """
+    url = f"{base_url}/inventory_levels.json"
+    current: List[int] = []
+    session = requests.Session()  # sólo para preparar URL
+    try:
+        for id_ in ids:
+            candidate = current + [id_]
+            params = {"inventory_item_ids": ",".join(map(str, candidate)), "limit": limit_param}
+            prep = requests.Request("GET", url, params=params).prepare()
+            url_len = len(prep.url or "")
+            if len(candidate) > max_ids_per_call or url_len > url_max_len:
+                if not current:
+                    # Si un solo id ya excediera (muy improbable), lo mandamos solo
+                    yield [id_]
+                    current = []
+                else:
+                    yield current
+                    current = [id_]
+            else:
+                current = candidate
+        if current:
+            yield current
+    finally:
+        session.close()
+
+# ----------------- Fetch paginado por lote -----------------
+def fetch_inventory_levels_for_chunk(
+    session: requests.Session,
+    limiter: RateLimiter,
+    base_url: str,
+    headers: Dict[str, str],
+    item_ids_chunk: List[int],
+    timeout: float = 30.0,
+) -> List[Dict[str, Any]]:
+    """
+    Hace GET /inventory_levels.json para un chunk de ids y pagina por Link.
+    """
+    url = f"{base_url}/inventory_levels.json"
+    params = {
+        "inventory_item_ids": ",".join(map(str, item_ids_chunk)),
+        "limit": 250,
+    }
+    results: List[Dict[str, Any]] = []
+
+    while url:
+        limiter.wait()
+        resp = session.get(url, headers=headers, params=params, timeout=timeout)
+
+        if resp.status_code == 200:
+            data = resp.json() or {}
+            results.extend(data.get("inventory_levels", []))
+            # Siguiente página (dentro del MISMO chunk)
+            link_header = resp.headers.get("Link")
+            if link_header:
+                url = get_link_next(link_header)
+                params = None  # importante: después de la primera, no vuelvas a pasar params
+            else:
+                url = None
+                break
+
+        elif resp.status_code == 429:
+            # Respeta Retry-After y reintenta misma URL
+            wait_s = get_retry_after(resp.headers, default_seconds=1.0)
+            time.sleep(wait_s)
+            continue
+
+        elif 500 <= resp.status_code < 600:
+            # backoff y reintento manual
+            time.sleep(0.6 + random.random() * 0.8)
+            continue
+        else:
+            # 4xx distinto de 429: aborta este chunk
+            # print(f"Error {resp.status_code}: {resp.text[:200]}")
+            break
+
+    return results
+
+# ----------------- Función principal: 5,919 ids sin pasar de 4 rps -----------------
+def fetch_all_inventory_levels_for_items(all_item_ids: List[int]) -> List[Dict[str, Any]]:
+    """
+    Recorre TODOS los inventory_item_ids en chunks aceptables por Shopify,
+    pagina dentro de cada chunk y agrega todo en una sola lista.
+    """
+    if not all_item_ids:
+        return []
+
+    base_url, headers = get_credentials_shopify()
+    session = make_session()
+    limiter = RateLimiter(max_calls=MAX_CALLS_PER_SECOND, period=1.0, min_interval=MIN_INTERVAL)
+
+    all_results: List[Dict[str, Any]] = []
+
+    try:
+        # 1) Partir ids por capacidad de URL / cantidad
+        for idx, chunk in enumerate(
+            chunk_ids_by_url_capacity(base_url, all_item_ids, max_ids_per_call=50, url_max_len=3800, limit_param=250),
+            start=1
+        ):
+            # 2) Para cada chunk, pagina internamente
+            chunk_results = fetch_inventory_levels_for_chunk(
+                session=session,
+                limiter=limiter,
+                base_url=base_url,
+                headers=headers,
+                item_ids_chunk=chunk,
+            )
+            all_results.extend(chunk_results)
+
+            # (Opcional) pequeño respiro entre chunks si vas muy justo de límite compartido
+            # time.sleep(0.05)
+
+            # print(f"Chunk {idx}: ids={len(chunk)} niveles={len(chunk_results)}")
+    finally:
+        session.close()
+
+    # (Opcional) deduplicar por inventory_item_id + location_id si hiciera falta
+    # seen = set()
+    # dedup = []
+    # for r in all_results:
+    #     key = (r.get("inventory_item_id"), r.get("location_id"))
+    #     if key not in seen:
+    #         seen.add(key)
+    #         dedup.append(r)
+    # return dedup
+
+    return all_results
+
+Key = Tuple[int, int, str]
+
+def _key(row: Dict[str, Any]) -> Key:
+    return (
+        int(row["variant_id"]),
+        int(row["location_id"]),
+        str(row.get("barcode", "")).strip()
+    )
+
+def find_stock_differences_return_shopify(
+    db_inventory: List[Dict[str, Any]],         # primera lista (tu DB)
+    shopify_levels: List[Dict[str, Any]],       # segunda lista (Shopify)
+    db_stock_field: str = "stock",
+    shopify_stock_field: str = "stock",
+) -> List[Dict[str, Any]]:
+    """
+    Devuelve objetos de Shopify (variant_id, location_id, barcode, stock)
+    SOLO cuando el stock difiere respecto a tu DB.
+    """
+    # Indexa tu DB por llave compuesta
+    db_by_key: Dict[Key, Dict[str, Any]] = {_key(r): r for r in db_inventory}
+
+    diffs: List[Dict[str, Any]] = []
+
+    for s in shopify_levels:
+        k = _key(s)
+        db_row = db_by_key.get(k)
+        if db_row is None:
+            # No existe en DB → no comparamos (si quisieras incluirlos como "nuevos", cámbialo)
+            continue
+
+        db_stock = int(db_row.get(db_stock_field) or 0)
+        shop_stock = int(s.get(shopify_stock_field) or 0)
+
+        if db_stock != shop_stock:
+            # responde con el objeto de Shopify
+            diffs.append({
+                "variant_id": k[0],
+                "location_id": k[1],
+                "barcode": k[2],
+                "stock": shop_stock,
+            })
+
+    return diffs

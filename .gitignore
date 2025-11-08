@@ -15,3 +15,5 @@ envs/
 # Ignorar el directorio __pycache__ y los archivos .pyc generados
 __pycache__/
 *.pyc
+inventario_sync.log
+*.log

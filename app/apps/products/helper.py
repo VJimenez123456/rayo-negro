@@ -2,12 +2,17 @@
 from .models import ProductSchema  #, Variant
 # from typing import List
 from app.common.utils import (
+    MIN_INTERVAL,
+    backoff_from_bucket,
     get_credentials_shopify,
     get_link_next,
+    get_retry_after,
     log_api_call,
+    make_session,
     RateLimiter,
 )
 import requests
+import random, time
 
 
 sql_product_create = """
@@ -73,30 +78,55 @@ def get_products_in_shopify() -> list:
     products = []
     base_url, headers = get_credentials_shopify()
     url = f"{base_url}/products.json?limit=250"
-    rate_limiter = RateLimiter(max_calls=4, period=1)
-    session = requests.Session()
-    products = []
+
+    rate_limiter = RateLimiter(max_calls=4, period=1.0, min_interval=MIN_INTERVAL)
+    session = make_session()
 
     while url:
         try:
             rate_limiter.wait()
-            response = session.get(url, headers=headers)
-            # log_api_call(response)
+            response = session.get(url, headers=headers, timeout=30)
+
             if response.status_code == 200:
                 data = response.json()
                 fetched_products = data.get('products', [])
                 products.extend(fetched_products)
-                # pagination manager
+
+                # autorregulación según uso del bucket
+                backoff_from_bucket(response.headers)
+
+                # paginación por Link
                 link_header = response.headers.get('Link')
                 if link_header:
-                    url = get_link_next(link_header)
+                    next_url = get_link_next(link_header)
+                    url = next_url
                 else:
                     url = None
+
+            elif response.status_code == 429:
+                # Respetar Retry-After
+                wait_s = get_retry_after(response.headers, default_seconds=1.0)
+                print(f"429 recibido. Esperando {wait_s:.2f}s según Retry-After…")
+                time.sleep(wait_s)
+                # No avances de página ni rompas; reintenta misma URL
+                continue
+
             else:
+                # 5xx se reintentan via Retry del session; aquí solo log
                 print(f"Error inesperado al obtener productos: {response.status_code} {response.text}.")
-        except requests.RequestException as e:
-            print(f"Error en la solicitud HTTP para productos.")
-            break
+                if 500 <= response.status_code < 600:
+                    # Pequeño backoff manual adicional
+                    time.sleep(0.5 + random.random() * 0.5)
+                    continue
+                # Para 4xx (excepto 429), salimos para no ciclar
+                break
+
+        except requests.RequestException:
+            print("Error en la solicitud HTTP para productos.")
+            # backoff leve antes de reintentar el bucle
+            time.sleep(0.7 + random.random() * 0.5)
+            continue
+
     session.close()
     return products
 

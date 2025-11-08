@@ -1,6 +1,7 @@
 
 import time
 from datetime import datetime
+from app.apps.inventories.helper import sql_inventory_update
 from .helper import (
     delete_inventory,
     # fetch_all_inventory_levels,
@@ -17,6 +18,10 @@ from .helper import (
     update_location_in_inventory,
     fetch_shopify_variant,
     get_all_orders_shopify,
+    fetch_shopify_variants_bulk,
+    # fetch_shopify_variants_for_items,
+    fetch_all_inventory_levels_for_items,
+    find_stock_differences_return_shopify,
 )
 from app.database import get_db_connection
 from mysql.connector import Error
@@ -35,6 +40,7 @@ from app.apps.products.services import (
     # delete_variant,
     get_variants_with_ids,
     get_one_product_for_id,
+    delete_many_products_service,   
 )
 from app.apps.inventories.services import (
     # update_many_inventory_service,
@@ -1168,3 +1174,147 @@ async def update_orders_service():
     print("Finish update update_orders")
     print(f"Execution time: {duration:.4f} seconds")
     return is_updated
+
+
+async def update_or_create_products_and_variants_shopify_service():
+    BATCH_SIZE = 500
+    print("Init update_or_create_products_and_variants_shopify_service")
+    init_time = time.time()
+    is_updated = False
+
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+
+    try:
+        productos_shopify = get_products_in_shopify()
+        # print("productos_shopify:::--->>>:len", len(productos_shopify))
+        # print("productos_shopify:::--->>>", productos_shopify[:1])
+        productos_shopify_index = {int(p["id"]): p for p in productos_shopify if "id" in p}
+        # print("productos_shopify_index::::::::::::::::::", productos_shopify_index)
+        # products_shopify_format = []
+        # for producto_shop in productos_shopify:
+        #     products_shopify_format.append(ProductSchema(**producto_shop))
+        # print("products_shopify_format[:1]", products_shopify_format[:1])
+        productos_in_db = await get_all_products_in_db()
+        productos_in_db_index = {int(p["product_id"]): p for p in productos_in_db if "product_id" in p}
+        # print("productos_in_db_index::::::::::::::::::", productos_in_db_index)
+        # print("productos_in_db:::--->>>:len", len(productos_in_db))
+        # print("productos_in_db:::--->>>", productos_in_db[:1])
+
+        shop_pids = set(productos_shopify_index.keys())
+        db_pids = set(productos_in_db_index.keys())
+        
+        # # delete product and variants
+        eliminar_de_db = list(db_pids - shop_pids)
+        # delete_many_products_service(eliminar_de_db)
+
+        # 
+        crear_en_db = list(shop_pids - db_pids)
+        # if len(crear_en_db):
+        #     for i in range(0, len(products_schemas), BATCH_SIZE):
+        #         batch = products_schemas[i:i+BATCH_SIZE]
+        #         await update_or_create_many_products_service(batch)
+        #         print(f"Batch {i//BATCH_SIZE + 1} updated successfully.")
+        #         time.sleep(1)
+
+        
+        en_ambos = shop_pids & db_pids
+
+        print("crear_en_db", len(crear_en_db))
+        print("eliminar_de_db", len(eliminar_de_db))
+        print("en_ambos", len(en_ambos))
+
+    except Error as e:
+        print(f"Database error: {e}")
+    finally:
+        cursor.close()
+        connection.close()
+
+    end_time = time.time()
+    print("Finish update_or_create_products_and_variants_shopify_service")
+    print(f"Execution time: {end_time - init_time:.4f} seconds")
+    return is_updated
+
+
+async def synchronize_inventory_service():
+    print("Init synchronize_inventory_service")
+    init_time = time.time()
+    is_updated = False
+
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    sql_inventory = """
+    SELECT i.*, pv.inventory_item_id, l.location_shopify
+    FROM inventory AS i
+    LEFT JOIN (
+        SELECT variant_id, MAX(inventory_item_id) AS inventory_item_id
+        FROM product_variant
+        GROUP BY variant_id
+    ) AS pv
+    ON pv.variant_id = i.variant_id
+    LEFT JOIN locations AS l
+    ON l.SucursalID = i.location_id;
+    """
+
+    try:
+        cursor.execute(sql_inventory)
+        inventory = cursor.fetchall()
+        print("inventory", len(inventory))
+        inventory_item_id_varant_index = {}
+        location_shopify_location_index = {}
+        inventory_item_ids = []
+        for inv in inventory:
+            if "inventory_item_id" in inv and inv["inventory_item_id"] is not None:
+                inventory_item_id_varant_index.update({int(inv["inventory_item_id"]): {
+                    "variant": inv["variant_id"],
+                    "barcode": inv["barcode"],
+                }})
+                inventory_item_ids.append(inv["inventory_item_id"])
+            if "location_shopify" in inv and inv["location_shopify"] != "None":
+                location_shopify_location_index.update({int(inv["location_shopify"]): inv["location_id"]})
+
+        unique_inventory_item_ids = list(set(inventory_item_ids))
+        inventory_shopify = fetch_all_inventory_levels_for_items(unique_inventory_item_ids)
+        print("inventory_shopify", len(inventory_shopify))
+        inventory_shopify_with_format = []
+        for inv_shop in inventory_shopify:
+            if location_shopify_location_index.get(inv_shop["location_id"]):
+                inventory_shopify_with_format.append({
+                    "variant_id": inventory_item_id_varant_index[inv_shop["inventory_item_id"]]["variant"],
+                    "location_id": location_shopify_location_index[inv_shop["location_id"]],
+                    "barcode": inventory_item_id_varant_index[inv_shop["inventory_item_id"]]["barcode"],
+                    "stock": inv_shop["available"],
+                })
+        data_for_update = find_stock_differences_return_shopify(
+            db_inventory=inventory, shopify_levels=inventory_shopify_with_format)
+        print("data_for_update", len(data_for_update))
+        # print("data_for_update", data_for_update[:10])
+        update_inventories = []
+        for elem in data_for_update:
+            update_inventories.append((
+                elem["variant_id"],
+                elem["location_id"],
+                elem["barcode"],
+                elem["stock"]
+            ))
+        print("update_inventories", len(update_inventories), update_inventories[:10])
+        batch_size = 500
+        len_update = len(update_inventories)
+        for i in range(0, len_update, batch_size):
+            lote = update_inventories[i:i+batch_size]
+            cursor.executemany(sql_inventory_update, lote)
+            connection.commit()
+            print(f"Inserted {i + len(lote)} of {len_update}...")
+        is_updated = True
+
+    except Error as e:
+        print(f"Database error: {e}")
+    finally:
+        cursor.close()
+        connection.close()
+
+    end_time = time.time()
+    print("Finish synchronize_inventory_service")
+    print(f"Execution time: {end_time - init_time:.4f} seconds")
+    return is_updated
+

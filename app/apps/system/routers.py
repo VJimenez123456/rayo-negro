@@ -280,12 +280,8 @@ async def update_or_create_products_and_variants_shopify():
 
 @router.get("/update/synchronize_inventory")
 async def synchronize_inventory():
-    is_updated = await synchronize_inventory_service()
-    if not is_updated:
-        JSONResponse(
-            {"message": "Error in update synchronize_inventory"},
-            status_code=status.HTTP_400_BAD_REQUEST
-        )
+    reponse = await synchronize_inventory_service()
     return {
         "message": "Successfully updated synchronize_inventory",
+        "data": reponse if reponse else {}
     }

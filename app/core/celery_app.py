@@ -29,7 +29,7 @@ celery.conf.update(
 celery.conf.beat_schedule = {
     "update-inventory": {
         "task": "app.tasks.daily.tarea_diaria",
-        "schedule": crontab(minute=32, hour=2),
+        "schedule": crontab(minute=50, hour=11),
         "options": {"queue": "default"},
     }
 }

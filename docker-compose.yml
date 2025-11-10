@@ -35,94 +35,106 @@ services:
   #     - "3306:3306"
   #   command: --default-authentication-plugin=mysql_native_password
 
-  # redis:
-  #   image: redis:7
-  #   container_name: rayo_negro_redis
-  #   command: ["redis-server", "--appendonly", "yes"]
-  #   restart: always
-  #   healthcheck:
-  #     test: ["CMD", "redis-cli", "ping"]
-  #     interval: 5s
-  #     timeout: 3s
-  #     retries: 30
-  #   volumes:
-  #     - redis-data:/data
-  #   logging:
-  #     driver: "local"
-  #     options:
-  #       max-size: "10m"
-  #       max-file: "5"
+  redis:
+    image: redis:7
+    container_name: rayo_negro_redis
+    command: ["redis-server", "--appendonly", "yes"]
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - redis-data:/data
+    logging:
+      driver: "local"
+      options:
+        max-size: "10m"
+        max-file: "5"
 
-  # celery_worker:
-  #   build:
-  #     context: .
-  #   container_name: rayo_negro_celery_worker
-  #   env_file:
-  #     - .env
-  #   environment:
-  #     TZ: "America/Bogota"
-  #     CELERY_BROKER_URL: "redis://redis:6379/0"
-  #     CELERY_RESULT_BACKEND: "redis://redis:6379/1"
-  #   command: >
-  #     bash -lc "celery -A app.core.celery_app.celery worker
-  #     -l info --concurrency=2"
-  #   volumes:
-  #     - ./app:/app/app
-  #   restart: always
-  #   depends_on:
-  #     redis:
-  #       condition: service_healthy
-  #   logging:
-  #     driver: "local"
-  #     options:
-  #       max-size: "10m"
-  #       max-file: "5"
+  celery_worker:
+    build:
+      context: .
+    container_name: rayo_negro_celery_worker
+    env_file:
+      - .env
+    environment:
+      TZ: "America/Bogota"
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "redis://redis:6379/1"
+    command: >
+      bash -lc "celery -A app.core.celery_app.celery worker
+      -l info --concurrency=2"
+    volumes:
+      - ./app:/app/app
+    restart: always
+    depends_on:
+      redis:
+        condition: service_healthy
+    logging:
+      driver: "local"
+      options:
+        max-size: "10m"
+        max-file: "5"
 
-  # celery_beat:
-  #   build:
-  #     context: .
-  #   container_name: rayo_negro_celery_beat
-  #   env_file:
-  #     - .env
-  #   environment:
-  #     TZ: "America/Bogota"
-  #     CELERY_BROKER_URL: "redis://redis:6379/0"
-  #     CELERY_RESULT_BACKEND: "redis://redis:6379/1"
-  #   command: >
-  #     bash -lc "celery -A app.core.celery_app.celery beat
-  #     -l info --pidfile= --schedule=/tmp/celerybeat-schedule.db"
-  #   volumes:
-  #     - ./app:/app/app
-  #   restart: always
-  #   depends_on:
-  #     redis:
-  #       condition: service_healthy
-  #   logging:
-  #     driver: "local"
-  #     options:
-  #       max-size: "10m"
-  #       max-file: "5"
+  celery_beat:
+    build:
+      context: .
+    container_name: rayo_negro_celery_beat
+    env_file:
+      - .env
+    environment:
+      TZ: "America/Bogota"
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "redis://redis:6379/1"
+    command: >
+      bash -lc "celery -A app.core.celery_app.celery beat
+      -l info --pidfile= --schedule=/tmp/celerybeat-schedule.db"
+    volumes:
+      - ./app:/app/app
+    restart: always
+    depends_on:
+      redis:
+        condition: service_healthy
+    logging:
+      driver: "local"
+      options:
+        max-size: "10m"
+        max-file: "5"
 
-  # # flower:
-  # #   image: mher/flower:2.0.1   # fija versión
-  # #   container_name: rayo_negro_flower
-  # #   ports:
-  # #     - "5555:5555"
-  # #   command:
-  # #     - "flower"
-  # #     - "--broker=redis://redis:6379/0"
-  # #     - "--result-backend=redis://redis:6379/1"
-  # #     - "--port=5555"
-  # #     - "--url-prefix=/"
-  # #     - "--persistent=true"
-  # #     - "--state-save-interval=10"
-  # #     # - "--basic_auth=user:pass"  # opcional
-  # #   depends_on:
-  # #     redis:
-  # #       condition: service_healthy
-  # #   restart: always
+  flower:
+    image: mher/flower:2.0.1
+    container_name: rayo_negro_flower
+    ports:
+      - "5555:5555"
+    env_file:
+      - .env
+    environment:
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
+      FLOWER_URL_PREFIX: /flower
+      FLOWER_USER: ${FLOWER_USER}
+      FLOWER_PASSWORD: ${FLOWER_PASSWORD}
+    command: >
+      sh -lc '
+        celery --broker="${CELERY_BROKER_URL}" flower
+        --port=5555
+        --persistent=True
+        --state_save_interval=15000
+        --db=/data/flower.db
+        ${FLOWER_URL_PREFIX:+--url_prefix="${FLOWER_URL_PREFIX}"} 
+        --basic_auth="${FLOWER_USER}:${FLOWER_PASSWORD}"
+      '
+    volumes:
+      - flower-data:/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: always
 
 volumes:
   db-data:
   redis-data:
+  flower-data:
 

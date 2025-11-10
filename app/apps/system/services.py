@@ -1255,11 +1255,13 @@ async def synchronize_inventory_service():
     LEFT JOIN locations AS l
     ON l.SucursalID = i.location_id;
     """
+    reponse = {}
 
     try:
         cursor.execute(sql_inventory)
         inventory = cursor.fetchall()
         print("inventory", len(inventory))
+        reponse.update({"inventory": len(inventory)})
         inventory_item_id_varant_index = {}
         location_shopify_location_index = {}
         inventory_item_ids = []
@@ -1276,6 +1278,7 @@ async def synchronize_inventory_service():
         unique_inventory_item_ids = list(set(inventory_item_ids))
         inventory_shopify = fetch_all_inventory_levels_for_items(unique_inventory_item_ids)
         print("inventory_shopify", len(inventory_shopify))
+        reponse.update({"inventory_shopify": len(inventory_shopify)})
         inventory_shopify_with_format = []
         for inv_shop in inventory_shopify:
             if location_shopify_location_index.get(inv_shop["location_id"]):
@@ -1298,6 +1301,7 @@ async def synchronize_inventory_service():
                 elem["stock"]
             ))
         print("update_inventories", len(update_inventories), update_inventories[:10])
+        reponse.update({"update_inventories": len(update_inventories)})
         batch_size = 500
         len_update = len(update_inventories)
         for i in range(0, len_update, batch_size):
@@ -1305,7 +1309,6 @@ async def synchronize_inventory_service():
             cursor.executemany(sql_inventory_update, lote)
             connection.commit()
             print(f"Inserted {i + len(lote)} of {len_update}...")
-        is_updated = True
 
     except Error as e:
         print(f"Database error: {e}")
@@ -1316,5 +1319,5 @@ async def synchronize_inventory_service():
     end_time = time.time()
     print("Finish synchronize_inventory_service")
     print(f"Execution time: {end_time - init_time:.4f} seconds")
-    return is_updated
+    return reponse
 

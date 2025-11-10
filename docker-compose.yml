@@ -107,7 +107,7 @@ services:
     image: mher/flower:2.0.1
     container_name: rayo_negro_flower
     ports:
-      - "5555:5555"
+      - "5556:5555"
     env_file:
       - .env
     environment:

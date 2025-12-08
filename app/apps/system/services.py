@@ -1272,7 +1272,7 @@ async def synchronize_inventory_service():
                     "barcode": inv["barcode"],
                 }})
                 inventory_item_ids.append(inv["inventory_item_id"])
-            if "location_shopify" in inv and inv["location_shopify"] != "None":
+            if "location_shopify" in inv and inv["location_shopify"] != "None" and (inv.get("location_shopify", "")).isnumeric():
                 location_shopify_location_index.update({int(inv["location_shopify"]): inv["location_id"]})
 
         unique_inventory_item_ids = list(set(inventory_item_ids))
